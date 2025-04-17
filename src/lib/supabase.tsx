@@ -37,7 +37,7 @@ export async function addBook(bookData: Book) {
         completed: bookData.completed,
         rating: bookData.completed ? bookData.rating ?? null : null,
         notes: bookData.completed ? bookData.notes ?? null : null,
-        openlibrary_id: bookData.openlibrary_id ?? null,
+        book_id: bookData.book_id ?? null,
         isbn: bookData.isbn ?? null,
         cover_id: bookData.cover_id ?? null,
       },

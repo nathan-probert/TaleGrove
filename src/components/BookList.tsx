@@ -1,44 +1,50 @@
 import { Book } from '@/types';
+import BookCard from './BookCard';
+import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 type Props = {
   books: Book[];
-  userId: string | null;
   onDelete: (id: string) => void;
 };
 
-export default function BookList({ books, userId, onDelete }: Props) {
+const gridVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+};
+
+export default function BookList({ books, onDelete }: Props) {
+  if (books.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-center">
+        <p className="text-xl text-gray-500 mb-4">
+          Looks like your bookshelf is feeling a bit lonely!
+        </p>
+        <Link
+          href="/search"
+          className="text-blue-500 hover:text-blue-700 underline"
+        >
+          Why not find some new friends for it?
+        </Link>
+      </div>
+    );
+  }
+
   return (
-    <div>      
-      <ul className="space-y-4">
-        {books.length === 0 ? (
-            <p>
-            No books added yet. Would you like to{' '}
-            <a href="/search" className="text-blue-500 hover:underline">
-              add one
-            </a>
-            ?
-            </p>
-        ) : (
-          books.map((book) => (
-            <li key={book.id} className="border p-4 rounded shadow">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-xl font-semibold">{book.title}</h2>
-                  <p className="text-gray-700">by {book.author}</p>
-                  <p className="text-sm">⭐ Rating: {book.rating}/10</p>
-                  {book.notes && <p className="mt-2 italic">"{book.notes}"</p>}
-                </div>
-                <button
-                  className="bg-red-500 text-white px-3 py-1 rounded"
-                  onClick={() => onDelete(book.id)}
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          ))
-        )}
-      </ul>
-    </div>
+    <motion.ul
+      variants={gridVariants}
+      initial="hidden"
+      animate="show"
+      className="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-6 p-6"
+    >
+      {books.map((book) => (
+        <BookCard key={book.id} book={book} onDelete={onDelete} />
+      ))}
+    </motion.ul>
   );
 }

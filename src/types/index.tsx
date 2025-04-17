@@ -6,8 +6,8 @@ export interface Book {
   rating?: number | null;
   notes?: string | null;
   isbn?: string | null;
-  openlibrary_id?: string | null;
-  cover_id?: number | null;
+  book_id?: string | null;
+  cover_url?: string | null;
   completed: boolean;
   created_at?: string;
 }

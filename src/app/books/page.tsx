@@ -23,6 +23,9 @@ export default function Books() {
           console.error('Error loading books:', error);
         }
       }
+      else {
+        window.location.href = '/signin';
+      }
     };
 
     initializeData();
@@ -30,9 +33,8 @@ export default function Books() {
 
   const handleDeleteBook = async (id: string) => {
     try {
-      // Wait for the delete operation to finish before updating the state
       await deleteBook(id);
-      setBooks(prev => prev.filter(book => book.id !== id)); // Update local state after deletion
+      setBooks(prev => prev.filter(book => book.id !== id));
     } catch (error) {
       console.error('Error deleting book:', error);
     }
@@ -43,7 +45,6 @@ export default function Books() {
       <h1 className="text-3xl font-bold mb-4">📚 Dashboard</h1>
       <BookList 
         books={books}
-        userId={userId}
         onDelete={handleDeleteBook}
       />
     </div>
