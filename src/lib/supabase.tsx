@@ -39,7 +39,7 @@ export async function addBook(bookData: Book) {
         notes: bookData.completed ? bookData.notes ?? null : null,
         book_id: bookData.book_id ?? null,
         isbn: bookData.isbn ?? null,
-        cover_id: bookData.cover_id ?? null,
+        cover_url: bookData.cover_url ?? null,
       },
     ])
     .single();
@@ -52,4 +52,16 @@ export async function deleteBook(id: string) {
   const { error } = await supabase.from('books').delete().eq('id', id);
   if (error) throw error;
   return true;
+}
+
+export async function checkIfBookInCollection(bookId: string, userId: string) {
+  const { data, error } = await supabase
+    .from('books')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('book_id', bookId)
+    .single();
+
+  if (error) throw error;
+  return data !== null;
 }

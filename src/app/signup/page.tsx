@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import supabase from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-
+import Link from 'next/link'; // Import Link for client-side navigation
 
 export default function SignUp() {
     const [email, setEmail] = useState('');
@@ -22,10 +22,6 @@ export default function SignUp() {
         const { error: signUpError } = await supabase.auth.signUp({
             email,
             password,
-            // You might want to add options for redirect URL after email confirmation
-            // options: {
-            //   emailRedirectTo: `${window.location.origin}/`,
-            // },
         });
 
         setLoading(false);
@@ -33,12 +29,7 @@ export default function SignUp() {
         if (signUpError) {
             setError(signUpError.message);
         } else {
-            // Display a success message - user needs to check their email
-            setSuccessMessage('Sign up successful! Please check your email to confirm your account.');
-            // Optionally clear the form or redirect after a delay
-            // setEmail('');
-            // setPassword('');
-            // setTimeout(() => router.push('/signin'), 5000); // Redirect to signin after 5s
+            router.push('/books');
         }
     };
 
@@ -72,11 +63,11 @@ export default function SignUp() {
                             type="email"
                             autoComplete="email"
                             required
-                            className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:opacity-50"
                             placeholder="you@example.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            disabled={loading}
+                            disabled={loading || !!successMessage} 
                         />
                     </div>
                     <div>
@@ -90,26 +81,22 @@ export default function SignUp() {
                             id="password"
                             name="password"
                             type="password"
-                            autoComplete="new-password" // Use "new-password" for sign up
+                            autoComplete="new-password"
                             required
-                            minLength={6} // Supabase default minimum password length
-                            className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            minLength={6}
+                            className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:opacity-50"
                             placeholder="Password (min. 6 characters)"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            disabled={loading}
+                            disabled={loading || !!successMessage}
                         />
                     </div>
 
                     <div>
                         <button
                             type="submit"
-                            disabled={loading || !!successMessage} // Disable after success too
-                            className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-                                loading || successMessage
-                                    ? 'bg-indigo-400 cursor-not-allowed'
-                                    : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
-                            }`}
+                            disabled={loading || !!successMessage}
+                            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed"
                         >
                             {loading ? 'Signing Up...' : 'Sign Up'}
                         </button>
@@ -117,9 +104,9 @@ export default function SignUp() {
                      <div className="text-sm text-center">
                         <p className="text-gray-600">
                             Already have an account?{' '}
-                            <a href="/signin" className="font-medium text-indigo-600 hover:text-indigo-500">
+                            <Link href="/signin" className="font-medium text-indigo-600 hover:text-indigo-500">
                                 Sign In
-                            </a>
+                            </Link>
                         </p>
                     </div>
                 </form>

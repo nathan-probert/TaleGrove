@@ -1,32 +1,51 @@
 'use client';
 
-import { useState } from 'react';
-import supabase, { signInWithEmail, signOut, getCurrentUser } from '@/lib/supabase';
+import { useState, useTransition } from 'react';
+import { signInWithEmail } from '@/lib/supabase'; 
 import { useRouter } from 'next/navigation';
+import { AuthError } from '@supabase/supabase-js';
+
+const getFriendlyErrorMessage = (error: AuthError | null): string | null => {
+    if (!error) return null;
+
+    console.error('Sign-in error:', error); // Log the original error for debugging
+
+    if (error.message.includes('Invalid login credentials')) {
+        return 'Invalid email or password. Please try again.';
+    }
+    if (error.message.includes('Email not confirmed')) {
+        return 'Please confirm your email address before signing in.';
+    }
+    // Add more specific error mappings as needed
+
+    // Fallback generic message
+    return 'An unexpected error occurred. Please try again later.';
+};
 
 export default function SignIn() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [isPending, startTransition] = useTransition();
     const router = useRouter();
 
     const handleSignIn = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
-        setLoading(true);
 
-        const { error: signInError } = await signInWithEmail(email, password);
+        startTransition(async () => {
+            const { error: signInError } = await signInWithEmail(email, password);
 
-        setLoading(false);
-        if (signInError) {
-            setError(signInError.message);
-        } else {
-            // Redirect to a protected route or dashboard on success
-            router.push('/'); // Or wherever you want the user to go
-            router.refresh(); // Ensure layout re-renders with user state
-        }
+            if (signInError) {
+                setError(getFriendlyErrorMessage(signInError));
+            } else {
+                router.replace('/'); 
+                router.refresh();
+            }
+        });
     };
+
+    const isLoading = isPending;
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -36,14 +55,14 @@ export default function SignIn() {
                 </h2>
                 <form onSubmit={handleSignIn} className="space-y-6">
                     {error && (
-                        <p className="text-red-600 text-sm text-center bg-red-100 p-2 rounded">
+                        <p className="text-red-600 text-sm text-center bg-red-100 p-3 rounded-md border border-red-200">
                             {error}
                         </p>
                     )}
                     <div>
                         <label
                             htmlFor="email"
-                            className="block text-sm font-medium text-gray-700"
+                            className="block text-sm font-medium text-gray-700 mb-1"
                         >
                             Email address
                         </label>
@@ -53,17 +72,17 @@ export default function SignIn() {
                             type="email"
                             autoComplete="email"
                             required
-                            className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             placeholder="you@example.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            disabled={loading}
+                            disabled={isLoading}
                         />
                     </div>
                     <div>
                         <label
                             htmlFor="password"
-                            className="block text-sm font-medium text-gray-700"
+                            className="block text-sm font-medium text-gray-700 mb-1"
                         >
                             Password
                         </label>
@@ -73,27 +92,28 @@ export default function SignIn() {
                             type="password"
                             autoComplete="current-password"
                             required
-                            className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             placeholder="Password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            disabled={loading}
+                            disabled={isLoading}
                         />
                     </div>
 
                     <div>
                         <button
                             type="submit"
-                            disabled={loading}
-                            className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-                                loading
+                            disabled={isLoading}
+                            className={`w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-colors duration-150 ${
+                                isLoading
                                     ? 'bg-indigo-400 cursor-not-allowed'
                                     : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
                             }`}
                         >
-                            {loading ? 'Signing In...' : 'Sign In'}
+                            {isLoading ? 'Signing In...' : 'Sign In'}
                         </button>
                     </div>
+
                 </form>
             </div>
         </div>
