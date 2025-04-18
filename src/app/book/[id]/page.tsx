@@ -16,9 +16,11 @@ export default function BookDetailPage() {
 
   useEffect(() => {
     const fetchBook = async () => {
-      const res = await fetch(`https://www.googleapis.com/books/v1/volumes/${id}`);
-      const fetchedItem = await res.json(); // Store the entire item here
-      setItem(fetchedItem); // Set the fetched item
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY;
+
+      const res = await fetch(`https://www.googleapis.com/books/v1/volumes/${id}?key=${apiKey}`);
+      const fetchedItem = await res.json();
+      setItem(fetchedItem);
 
       const volumeInfo = fetchedItem.volumeInfo;
 
@@ -50,7 +52,7 @@ export default function BookDetailPage() {
         const inCollection = await checkIfBookInCollection(fetchedItem.id, userId);
         setIsInCollection(inCollection);
       } else {
-        setIsInCollection(false); 
+        setIsInCollection(false);
       }
     };
 

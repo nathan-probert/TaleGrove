@@ -5,7 +5,6 @@ import Link from 'next/link';
 
 type Props = {
   books: Book[];
-  onDelete: (id: string) => void;
 };
 
 const gridVariants = {
@@ -18,7 +17,7 @@ const gridVariants = {
   },
 };
 
-export default function BookList({ books, onDelete }: Props) {
+export default function BookList({ books }: Props) {
   if (books.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
@@ -44,7 +43,7 @@ export default function BookList({ books, onDelete }: Props) {
       style={{ gap: '25px' }}>
 
       {books.map((book) => (
-        <BookCard key={book.id} book={book} onDelete={onDelete} />
+        <BookCard key={book.id} book={book} />
       ))}
     </motion.ul>
   );

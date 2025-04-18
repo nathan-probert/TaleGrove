@@ -11,3 +11,19 @@ export interface Book {
   completed: boolean;
   created_at?: string;
 }
+
+export interface Folder {
+  id: string;
+  name: string;
+  user_id: string;
+  parent_id: string | null;
+  created_at: string;
+}
+
+export type BookOrFolder = Book | Folder & { isFolder: true };
+
+export interface GoogleBooksVolume {
+  volumeInfo: {
+    description?: string;
+  };
+}

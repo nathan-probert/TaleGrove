@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import BookList from '@/components/dashboard/BookList';
 import { Book } from '@/types';
 import { fetchUserBooks } from '@/lib/getBooks';
-import supabase, { deleteBook } from '@/lib/supabase';
+import supabase from '@/lib/supabase';
 import Link from 'next/link';
 
 export default function Books() {
@@ -42,15 +42,6 @@ export default function Books() {
     initializeData();
   }, []);
 
-  const handleDeleteBook = async (id: string) => {
-    try {
-      await deleteBook(id);
-      setBooks(prev => prev.filter(book => book.id !== id));
-    } catch (error) {
-      console.error('Error deleting book:', error);
-    }
-  };
-
   if (isLoading) {
     return (
       <div>
@@ -64,17 +55,16 @@ export default function Books() {
     <div>
       <h1 className="text-3xl font-bold mb-4">📚 Dashboard</h1>
       {books.length > 0 && (
-      <div className="mt-6 text-center">
-        <Link href="/search">
-        <button className="inline-flex cursor-pointer justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-          Search for more books
-        </button>
-        </Link>
-      </div>
+        <div className="mt-6 text-center">
+          <Link href="/search">
+            <button className="inline-flex cursor-pointer justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+              Search for more books
+            </button>
+          </Link>
+        </div>
       )}
       <BookList
         books={books}
-        onDelete={handleDeleteBook}
       />
     </div>
   );
