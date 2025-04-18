@@ -26,6 +26,7 @@ export default function Books() {
         { id: null, name: 'Home', slug: null }
     ]);
 
+
     const router = useRouter();
 
     const resolveFolderPath = async (userId: string, slugPath: string[]) => {
@@ -47,6 +48,9 @@ export default function Books() {
             } else {
                 query = query.eq('parent_id', sanitizedParentId);
             }
+
+            console.log("Parent id from crumb: ", breadcrumbs.length > 1 ? breadcrumbs[breadcrumbs.length - 2].id : null);
+            console.log("Parent id from slug: ", parentId);
 
             const result = await query.single();
 
@@ -109,12 +113,29 @@ export default function Books() {
     }, [slugArray.join('/')]);
 
     const handleFolderClick = (folderId: string) => {
+        if (folderId === "null") {
+            router.push('/books');
+            return;
+        }
+
         const clickedFolder = books.find(item => item.isFolder && item.id === folderId) as Folder | undefined;
+
         if (clickedFolder?.slug) {
             const newPath = [...slugArray, clickedFolder.slug].join('/');
             router.push(`/books/${newPath}`);
         } else {
-            console.error(`Could not find slug for folder ID: ${folderId}`);
+            // Try resolving via breadcrumbs (likely a "go up" folder)
+            const crumbIndex = breadcrumbs.findIndex(b => b.id === folderId);
+            if (crumbIndex !== -1) {
+                const path = breadcrumbs
+                    .slice(1, crumbIndex + 1)
+                    .map(c => c.slug)
+                    .filter(Boolean)
+                    .join('/');
+                router.push(path ? `/books/${path}` : '/books');
+            } else {
+                console.error(`Folder not found in books or breadcrumbs: ${folderId}`);
+            }
         }
     };
 
@@ -205,6 +226,8 @@ export default function Books() {
                         items={books}
                         onFolderClick={handleFolderClick}
                         folderId={currentFolderId}
+                        parentFolderId={breadcrumbs.length > 1 ? breadcrumbs[breadcrumbs.length - 2].id : null}
+                        parentFolderSlug={breadcrumbs.length > 1 ? breadcrumbs[breadcrumbs.length - 2].slug : null}
                         refresh={() => {
                             if (userId) fetchData(userId, slugArray);
                         }}

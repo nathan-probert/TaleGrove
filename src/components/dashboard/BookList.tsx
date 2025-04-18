@@ -1,62 +1,70 @@
-import { Book, Folder } from '@/types';
+'use client';
+
+import { BookOrFolder, Folder } from '@/types';
+import FolderCard from '@/components/FolderCard'; // Assuming the filename is lowercase
 import BookCard from './BookCard';
-import { motion } from 'framer-motion';
-import Link from 'next/link';
-import FolderCard from '@/components/FolderCard';
 
-type Item = Book | Folder;
 
-type Props = {
-  items: Item[];
-  onFolderClick?: (folderId: string, name: string) => void;
+interface Props {
+  items: BookOrFolder[];
+  onFolderClick: (folderId: string) => void;
   folderId: string | null;
+  parentFolderId?: string | null;
+  parentFolderSlug?: string | null;
   refresh: () => void;
-};
+  breadcrumbs?: { id: string | null; name: string; slug: string | null }[];
+}
 
+export default function BookList({ items, onFolderClick, folderId, parentFolderId, parentFolderSlug, refresh, breadcrumbs = [] }: Props) {
+  const isRoot = folderId === null;
+  const parentCrumb = breadcrumbs[breadcrumbs.length - 2]; // Previous folder in the breadcrumb trail
 
-const gridVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-    },
-  },
-};
+  // Explicitly type goUpFolder as Folder
+  const goUpFolder: Folder & { isFolder: true } = {
+    id: parentFolderId ?? 'null',
+    name: '⬅️ Go Up',
+    slug: parentFolderSlug ?? 'null',
+    user_id: '',
+    created_at: '',
+    parent_id: null,
+    isFolder: true, // Ensure this is explicitly true
+  };
 
-export default function BookList({ items, onFolderClick, folderId, refresh }: Props) {
-  console.log('Folder ID in BookList:', folderId);
-
-  if (items.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 text-center">
-        <p className="text-xl text-gray-500 mb-4">
-          Looks like your bookshelf is feeling a bit lonely!
-        </p>
-        <Link
-          href="/search"
-          className="text-blue-500 hover:text-blue-700 underline"
-        >
-          Why not find some new friends for it?
-        </Link>
-      </div>
-    );
-  }
+  const fullList: BookOrFolder[] = isRoot ? items : [goUpFolder, ...items];
 
   return (
-    <motion.ul
-      variants={gridVariants}
-      initial="hidden"
-      animate="show"
-      className="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-8 p-6"
-      style={{ gap: '25px' }}>
-      {items.map((item) => (
-        'title' in item ? (
-          <BookCard key={item.id} book={item} folderId={folderId} />
-        ) : (
-          <FolderCard key={item.id} folder={item} onFolderClick={onFolderClick} refresh={refresh} />
-        )
-      ))}
-    </motion.ul>
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {fullList.map((item) => {
+        if (item.isFolder) {
+          const folder = item as Folder;
+
+          return ( // Add return statement here
+            <FolderCard
+              key={folder.id}
+              folder={folder}
+              onFolderClick={(id: string) => { // Add explicit type 'string' for id
+                if (id === '__go_up__') {
+                  if (parentCrumb) {
+                    onFolderClick(parentCrumb.id || '');
+                  }
+                } else {
+                  onFolderClick(id);
+                }
+              }}
+              refresh={() => {
+                if (folder.id === '__go_up__' && parentCrumb) {
+                  console.log('Parent crumb:', parentCrumb);
+                  refresh();
+                } else {
+                  refresh();
+                }
+              }}
+            />
+          ); // Keep this closing parenthesis for the return statement
+        } else {
+          return <BookCard key={item.id} book={item} refresh={refresh} folderId={folderId} parentFolderId={parentFolderId ?? null} />;
+        }
+      })}
+    </div>
   );
 }

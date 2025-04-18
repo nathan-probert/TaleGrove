@@ -7,12 +7,16 @@ import { BookOpen, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useDrag } from 'react-dnd';
 
-export default function BookCard({ book, folderId }: { book: Book, folderId: string | null }) {
+export default function BookCard({ book, folderId, parentFolderId, refresh }: { book: Book, folderId: string | null, parentFolderId: string | null, refresh: () => void }) {
     console.log('Folder ID in BookCard:', folderId);
+
+    const effectiveFolderId = folderId === '__go_up__' ? parentFolderId : folderId;
 
     const [{ isDragging }, drag] = useDrag(() => ({
         type: 'item',
-        item: { id: book.id, folderId: folderId, type: 'book', info: book },
+        // Use effectiveFolderId for the folderId property in the item payload.
+        // parentFolderId is omitted based on the "only pass one" requirement.
+        item: { id: book.id, folderId: effectiveFolderId, type: 'book', info: book },
         collect: (monitor) => ({
             isDragging: !!monitor.isDragging(),
         }),

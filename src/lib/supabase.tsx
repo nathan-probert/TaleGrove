@@ -114,10 +114,16 @@ export async function createFolder(name: string, userId: string, parentId: strin
   return data;
 }
 
-export async function addBookToFolder(bookId: string, oldFolderId: string, folderId: string, userId: string) {
-  const { data, error } = await supabase
-    .from('folder_books')
-    .insert([{ book_id: bookId, folder_id: folderId, user_id: userId }]);
+export async function addBookToFolder(bookId: string, oldFolderId: string, folderId: string | null, userId: string) {
+  let data: any = null;
+
+  if (folderId !== "null") {
+    const { data, error } = await supabase
+      .from('folder_books')
+      .insert([{ book_id: bookId, folder_id: folderId, user_id: userId }]);
+
+    if (error) throw error;
+  }
 
   // remove from old folder if it exists
   if (oldFolderId) {
@@ -129,7 +135,6 @@ export async function addBookToFolder(bookId: string, oldFolderId: string, folde
       .eq('user_id', userId);
   }
 
-  if (error) throw error;
   return data;
 }
 
