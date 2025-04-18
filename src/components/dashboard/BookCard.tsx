@@ -5,8 +5,19 @@ import { Book } from '@/types';
 import { motion } from 'framer-motion';
 import { BookOpen, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useDrag } from 'react-dnd';
 
-export default function BookCard({ book }: { book: Book }) {
+export default function BookCard({ book, folderId }: { book: Book, folderId: string | null }) {
+    console.log('Folder ID in BookCard:', folderId);
+
+    const [{ isDragging }, drag] = useDrag(() => ({
+        type: 'item',
+        item: { id: book.id, folderId: folderId, type: 'book', info: book },
+        collect: (monitor) => ({
+            isDragging: !!monitor.isDragging(),
+        }),
+    }));
+
     const router = useRouter();
 
     const handleClick = () => {
@@ -15,6 +26,10 @@ export default function BookCard({ book }: { book: Book }) {
 
     return (
         <motion.li
+            ref={(node) => {
+                drag(node);
+            }}
+            style={{ opacity: isDragging ? 0.5 : 1 }}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ y: -2 }}

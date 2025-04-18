@@ -1,11 +1,18 @@
-import { Book } from '@/types';
+import { Book, Folder } from '@/types';
 import BookCard from './BookCard';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import FolderCard from '@/components/FolderCard';
+
+type Item = Book | Folder;
 
 type Props = {
-  books: Book[];
+  items: Item[];
+  onFolderClick?: (folderId: string, name: string) => void;
+  folderId: string | null;
+  refresh: () => void;
 };
+
 
 const gridVariants = {
   hidden: { opacity: 0 },
@@ -17,8 +24,10 @@ const gridVariants = {
   },
 };
 
-export default function BookList({ books }: Props) {
-  if (books.length === 0) {
+export default function BookList({ items, onFolderClick, folderId, refresh }: Props) {
+  console.log('Folder ID in BookList:', folderId);
+
+  if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
         <p className="text-xl text-gray-500 mb-4">
@@ -41,9 +50,12 @@ export default function BookList({ books }: Props) {
       animate="show"
       className="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-8 p-6"
       style={{ gap: '25px' }}>
-
-      {books.map((book) => (
-        <BookCard key={book.id} book={book} />
+      {items.map((item) => (
+        'title' in item ? (
+          <BookCard key={item.id} book={item} folderId={folderId} />
+        ) : (
+          <FolderCard key={item.id} folder={item} onFolderClick={onFolderClick} refresh={refresh} />
+        )
       ))}
     </motion.ul>
   );

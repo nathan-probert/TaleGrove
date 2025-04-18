@@ -96,20 +96,38 @@ export async function changeBookCover(bookId: string, userId: string, coverUrl: 
   return true;
 }
 
+// helper to create slug
+function slugify(name: string) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-') // replace non-alphanumeric with hyphen
+    .replace(/(^-|-$)+/g, '');   // trim hyphens
+}
+
 export async function createFolder(name: string, userId: string, parentId: string | null = null) {
   const { data, error } = await supabase
     .from('folders')
-    .insert([{ name, user_id: userId, parent_id: parentId }])
+    .insert([{ name, user_id: userId, parent_id: parentId, slug: slugify(name) }])
     .single();
 
   if (error) throw error;
   return data;
 }
 
-export async function addBookToFolder(bookId: string, folderId: string, userId: string) {
+export async function addBookToFolder(bookId: string, oldFolderId: string, folderId: string, userId: string) {
   const { data, error } = await supabase
     .from('folder_books')
     .insert([{ book_id: bookId, folder_id: folderId, user_id: userId }]);
+
+  // remove from old folder if it exists
+  if (oldFolderId) {
+    await supabase
+      .from('folder_books')
+      .delete()
+      .eq('book_id', bookId)
+      .eq('folder_id', oldFolderId)
+      .eq('user_id', userId);
+  }
 
   if (error) throw error;
   return data;
