@@ -57,19 +57,20 @@ export default function FolderCard({ folder, onFolderClick, refresh }: FolderCar
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ y: -2 }}
-            className="group relative flex flex-col h-full rounded-lg bg-card shadow-sm border border-border overflow-hidden"
+            onClick={handleClick}
+            className="group relative flex flex-col h-full rounded-lg bg-background shadow-sm border border-grey4 overflow-hidden hover:shadow-md transition-shadow"
             style={{
                 opacity: isDragging ? 0.5 : 1,
-                backgroundColor: isOver ? '#f0f0f0' : 'white'
+                backgroundColor: isOver ? 'var(--grey5)' : 'var(--background)'
             }}
-            onClick={handleClick}
         >
-            <div className="cursor-pointer w-full text-left group flex flex-col h-full">
-                <div className="w-full bg-muted overflow-hidden relative flex items-center justify-center h-48">
-                    <FolderIcon className="w-16 h-16 text-yellow-500" />
+            <div className="cursor-pointer w-full text-left group flex flex-col h-full p-4">
+                <div className="w-full bg-grey4/20 rounded-lg overflow-hidden relative flex items-center justify-center aspect-square mb-4">
+                    <FolderIcon className="w-12 h-12 text-primary" />
                 </div>
-                <div className="p-4">
-                    <h3 className="text-lg font-semibold line-clamp-2">{folder.name}</h3>
+                <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-foreground line-clamp-2">{folder.name}</h3>
+                    <p className="text-sm text-grey2 mt-1">Folder</p>
                 </div>
             </div>
         </motion.li>

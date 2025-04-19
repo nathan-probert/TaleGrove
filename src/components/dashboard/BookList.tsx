@@ -3,6 +3,7 @@
 import { BookOrFolder, Folder } from '@/types';
 import FolderCard from '@/components/FolderCard'; // Assuming the filename is lowercase
 import BookCard from './BookCard';
+import { getRootId } from '@/lib/supabase';
 
 
 interface Props {
@@ -13,10 +14,10 @@ interface Props {
   parentFolderSlug?: string | null;
   refresh: () => void;
   breadcrumbs?: { id: string | null; name: string; slug: string | null }[];
+  isRoot: boolean;
 }
 
-export default function BookList({ items, onFolderClick, folderId, parentFolderId, parentFolderSlug, refresh, breadcrumbs = [] }: Props) {
-  const isRoot = folderId === null;
+export default function BookList({ items, onFolderClick, folderId, parentFolderId, parentFolderSlug, refresh, breadcrumbs = [], isRoot }: Props) {
   const parentCrumb = breadcrumbs[breadcrumbs.length - 2]; // Previous folder in the breadcrumb trail
 
   // Explicitly type goUpFolder as Folder

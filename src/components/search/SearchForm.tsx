@@ -1,5 +1,7 @@
 'use client';
 
+import { Loader2 } from 'lucide-react';
+
 type SearchFormProps = {
   title: string;
   author: string;
@@ -17,29 +19,50 @@ export const SearchForm = ({
   onAuthorChange,
   onSubmit,
 }: SearchFormProps) => (
-  <form onSubmit={onSubmit} className="space-y-4 mb-6">
-    {/* Input fields */}
-    <div>
-      <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-        Title
-      </label>
-      <input
-        id="title"
-        value={title}
-        onChange={(e) => onTitleChange(e.target.value)}
-        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-        placeholder="Enter book title"
-      />
-    </div>
+  <div className="w-full max-w-md bg-background rounded-xl shadow-lg p-6 border border-grey4">
+    <form onSubmit={onSubmit} className="space-y-6">
+      <div>
+        <label htmlFor="title" className="block text-sm font-medium text-foreground mb-2">
+          Title
+        </label>
+        <input
+          id="title"
+          value={title}
+          onChange={(e) => onTitleChange(e.target.value)}
+          className="w-full px-4 py-2.5 rounded-lg border border-grey4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-grey2 text-foreground"
+          placeholder="Enter book title"
+          autoComplete="off"
+        />
+      </div>
 
-    {/* Author input field */}
+      <div>
+        <label htmlFor="author" className="block text-sm font-medium text-foreground mb-2">
+          Author
+        </label>
+        <input
+          id="author"
+          value={author}
+          onChange={(e) => onAuthorChange(e.target.value)}
+          className="w-full px-4 py-2.5 rounded-lg border border-grey4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-grey2 text-foreground"
+          placeholder="Enter author name"
+          autoComplete="off"
+        />
+      </div>
 
-    <button
-      type="submit"
-      disabled={loading || (!title && !author)}
-      className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      {loading ? 'Searching...' : 'Search'}
-    </button>
-  </form>
+      <button
+        type="submit"
+        disabled={loading || (!title && !author)}
+        className="w-full py-3 px-4 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      >
+        {loading ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>Searching...</span>
+          </>
+        ) : (
+          'Search Books'
+        )}
+      </button>
+    </form>
+  </div>
 );

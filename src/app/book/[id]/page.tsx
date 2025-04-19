@@ -25,6 +25,7 @@ export default function BookDetailPage() {
       const volumeInfo = fetchedItem.volumeInfo;
 
       const userId = await getUserId();
+      let bookId: string | null = null; // Declare bookId here
 
       let foundIsbn: string | null = null;
       if (volumeInfo.industryIdentifiers) {
@@ -32,28 +33,28 @@ export default function BookDetailPage() {
         const isbn10 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10');
         foundIsbn = isbn13?.identifier ?? isbn10?.identifier ?? null;
       }
-
       const coverUrl = `https://books.google.com/books/publisher/content/images/frontcover/${fetchedItem.id}?fife=w400-h600&source=gbs_api`;
 
+      if (userId) {
+        bookId = await checkIfBookInCollection(fetchedItem.id, userId); // Assign to the declared bookId
+        setIsInCollection(bookId !== null);
+      } else {
+        setIsInCollection(false);
+        setIsInCollection(false);
+      }
+
       setBook({
-        id: fetchedItem.id,
+        id: bookId ?? null,
         title: volumeInfo.title || 'No Title',
         author: volumeInfo.authors ? volumeInfo.authors.join(', ') : 'Unknown Author',
         rating: null,
         notes: null,
         user_id: userId ?? undefined,
-        completed: false,
+        status: "reading",
         book_id: fetchedItem.id,
         isbn: foundIsbn,
         cover_url: coverUrl,
       });
-
-      if (userId) {
-        const inCollection = await checkIfBookInCollection(fetchedItem.id, userId);
-        setIsInCollection(inCollection);
-      } else {
-        setIsInCollection(false);
-      }
     };
 
     if (id) fetchBook();
@@ -63,14 +64,18 @@ export default function BookDetailPage() {
     router.back();
   };
 
+  const goToDashboard = () => {
+    router.push('/books');
+  }
+
   if (!book || !item) return <p className="p-4">Loading...</p>; // Ensure both book and item are loaded
 
   return (
     <>
       {isInCollection ? (
-        <BookInCollection book={book} item={item} onBack={handleBack} />
+        <BookInCollection book={book} item={item} onBack={handleBack} goToDashboard={goToDashboard} />
       ) : (
-        <BookNotInCollection book={book} item={item} onBack={handleBack} />
+        <BookNotInCollection book={book} item={item} onBack={handleBack} goToDashboard={goToDashboard} />
       )}
     </>
   );

@@ -8,7 +8,7 @@ export interface Book {
   isbn?: string | null;
   book_id?: string | null;
   cover_url?: string | null;
-  completed: boolean;
+  status: string;
   created_at?: string;
 }
 

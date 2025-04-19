@@ -91,7 +91,7 @@ export default function BookCoversPage() {
                 rating: null,
                 notes: null,
                 user_id: userId ?? undefined,
-                completed: false,
+                status: "reading",
                 book_id: fetchedItem.id,
                 isbn: foundIsbn,
                 cover_url: coverUrls[0] || null,

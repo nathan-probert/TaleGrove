@@ -1,22 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import supabase from '@/lib/supabase';
+import supabase, { createRootFolder, getUserId } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link'; // Import Link for client-side navigation
+import Link from 'next/link';
+import Image from 'next/image';
 
 export default function SignUp() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
     const handleSignUp = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
-        setSuccessMessage(null);
         setLoading(true);
 
         const { error: signUpError } = await supabase.auth.signUp({
@@ -29,87 +28,112 @@ export default function SignUp() {
         if (signUpError) {
             setError(signUpError.message);
         } else {
+            const userId = await getUserId();
+            await createRootFolder(userId ?? '');
             router.push('/books');
         }
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-50">
-            <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
-                <h2 className="text-3xl font-extrabold text-center text-gray-900">
-                    Sign Up
-                </h2>
-                <form onSubmit={handleSignUp} className="space-y-6">
-                    {error && (
-                        <p className="text-red-600 text-sm text-center bg-red-100 p-2 rounded">
-                            {error}
-                        </p>
-                    )}
-                    {successMessage && (
-                        <p className="text-green-600 text-sm text-center bg-green-100 p-2 rounded">
-                            {successMessage}
-                        </p>
-                    )}
-                    <div>
-                        <label
-                            htmlFor="email"
-                            className="block text-sm font-medium text-gray-700"
-                        >
-                            Email address
-                        </label>
-                        <input
-                            id="email"
-                            name="email"
-                            type="email"
-                            autoComplete="email"
-                            required
-                            className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:opacity-50"
-                            placeholder="you@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            disabled={loading || !!successMessage} 
-                        />
-                    </div>
-                    <div>
-                        <label
-                            htmlFor="password"
-                            className="block text-sm font-medium text-gray-700"
-                        >
-                            Password
-                        </label>
-                        <input
-                            id="password"
-                            name="password"
-                            type="password"
-                            autoComplete="new-password"
-                            required
-                            minLength={6}
-                            className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:opacity-50"
-                            placeholder="Password (min. 6 characters)"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            disabled={loading || !!successMessage}
+        <div className="min-h-screen bg-gradient-to-br from-background to-grey3 flex items-center justify-center p-4">
+            <div className="w-full max-w-md bg-background rounded-xl shadow-lg p-8 border border-grey4">
+                <div className="flex flex-col items-center space-y-6">
+                    {/* Logo Container */}
+                    <div className="transition-transform hover:scale-105">
+                        <Image
+                            src="/images/colour_logo.png"
+                            alt="TaleGrove Logo"
+                            width={150}
+                            height={150}
+                            className="dark:invert"
+                            priority
                         />
                     </div>
 
-                    <div>
-                        <button
-                            type="submit"
-                            disabled={loading || !!successMessage}
-                            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed"
-                        >
-                            {loading ? 'Signing Up...' : 'Sign Up'}
-                        </button>
-                    </div>
-                     <div className="text-sm text-center">
-                        <p className="text-gray-600">
-                            Already have an account?{' '}
-                            <Link href="/signin" className="font-medium text-indigo-600 hover:text-indigo-500">
-                                Sign In
-                            </Link>
+                    {/* Heading */}
+                    <div className="text-center">
+                        <h1 className="text-3xl font-bold text-foreground">
+                            Join TaleGrove
+                        </h1>
+                        <p className="text-grey2 text-sm">
+                            Find your next favorite book today!
                         </p>
                     </div>
-                </form>
+
+                    {/* Form */}
+                    <form onSubmit={handleSignUp} className="w-full space-y-6">
+                        {error && (
+                            <div className="flex items-center p-3 text-sm text-primary bg-grey5 rounded-lg border border-grey4">
+                                <svg className="w-5 h-5 text-primary mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                                </svg>
+                                <span>{error}</span>
+                            </div>
+                        )}
+
+                        <div className="space-y-4">
+                            {/* Email Input */}
+                            <div>
+                                <label className="block text-sm font-medium text-foreground mb-2">
+                                    Email Address
+                                </label>
+                                <input
+                                    type="email"
+                                    required
+                                    className="w-full px-4 py-2.5 rounded-lg border border-grey4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-grey2 text-foreground"
+                                    placeholder="reader@example.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    disabled={loading}
+                                />
+                            </div>
+
+                            {/* Password Input */}
+                            <div>
+                                <label className="block text-sm font-medium text-foreground mb-2">
+                                    Password
+                                </label>
+                                <input
+                                    type="password"
+                                    required
+                                    minLength={6}
+                                    className="w-full px-4 py-2.5 rounded-lg border border-grey4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-grey2 text-foreground"
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    disabled={loading}
+                                />
+                            </div>
+
+                            {/* Submit Button */}
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full py-2.5 px-6 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {loading ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white/30 rounded-full animate-spin border-t-transparent" />
+                                        <span>Creating Account...</span>
+                                    </>
+                                ) : (
+                                    'Sign Up!'
+                                )}
+                            </button>
+                        </div>
+
+                        {/* Sign In Link */}
+                        <p className="text-center text-sm text-grey2">
+                            Already have an account?{' '}
+                            <Link
+                                href="/signin"
+                                className="text-primary font-medium hover:text-secondary underline underline-offset-4"
+                            >
+                                Sign in here
+                            </Link>
+                        </p>
+                    </form>
+                </div>
             </div>
         </div>
     );

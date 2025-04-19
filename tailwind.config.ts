@@ -2,21 +2,21 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   darkMode: ["class"],
-  content: ['./app/**/*.{js,ts,jsx,tsx}', './components/**/*.{js,ts,jsx,tsx}'],
+  content: ['./app/**/*.{js,ts,jsx,tsx}', './components/**/*.{js,ts,jsx,tsx}', './src/**/*.{js,ts,jsx,tsx}', './pages/**/*.{js,ts,jsx,tsx}', './public/**/*.{html,js}'],
 
   theme: {
     extend: {
       colors: {
         background: "var(--bg)",
         foreground: "var(--fg)",
-        primary: "#fa265b",
+        primary: "#009c41",
+        secondary: "#f215fa",
         grey: "var(--grey)",
         grey2: "var(--grey2)",
         grey3: "var(--grey3)",
         grey4: "var(--grey4)",
         grey5: "var(--grey5)",
         link: "var(--link)",
-        secondary: "#f215fa",
       },
       background: {
         DEFAULT: '#fa265b', // Light grey for light mode
