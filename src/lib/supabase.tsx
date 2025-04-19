@@ -1,5 +1,5 @@
 import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs';
-import { Book, Folder } from '@/types';
+import { Book, Folder, BookStatus } from '@/types';
 
 const supabase = createPagesBrowserClient({
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -106,10 +106,10 @@ export async function deleteBook(bookId: string, userId: string) {
   return (count ?? 0) > 0;
 }
 
-export async function checkIfBookInCollection(bookId: string, userId: string): Promise<string | null> {
+export async function checkIfBookInCollection(bookId: string, userId: string): Promise<Book | null> {
   const { data, error } = await supabase
     .from('books')
-    .select('id') // Select the primary key 'id'
+    .select('*') // Select all columns to get the full Book object
     .eq('user_id', userId)
     .eq('book_id', bookId) // Filter by the external book_id
     .limit(1)
@@ -120,7 +120,26 @@ export async function checkIfBookInCollection(bookId: string, userId: string): P
     throw error;
   }
 
-  return data?.id ?? null; // Return the internal 'id' or null if not found
+  return data as Book | null; // Return the full Book object or null if not found
+}
+
+export async function updateBookDetails(
+  bookId: string,
+  updates: { status: BookStatus; rating: number | null; notes: string },
+  userId: string
+) {
+  const { data, error } = await supabase
+    .from('books')
+    .update({
+      status: updates.status,
+      rating: updates.rating,
+      notes: updates.notes,
+    })
+    .eq('id', bookId)
+    .eq('user_id', userId);
+
+  if (error) throw error;
+  return data;
 }
 
 export async function changeBookCover(bookId: string, userId: string, coverUrl: string) {
@@ -227,6 +246,18 @@ export async function createRootFolder(userId: string) {
   return data;
 }
 
+export async function getParentId(folderId: string, userId: string) {
+  const { data, error } = await supabase
+    .from('folders')
+    .select('parent_id')
+    .eq('id', folderId)
+    .eq('user_id', userId)
+    .single();
+
+  if (error) throw error;
+  return data?.parent_id ?? null;
+}
+
 export async function removeBookFromFolder(bookId: string, folderId: string, userId: string) {
   const { error } = await supabase
     .from('folder_books')
@@ -296,4 +327,22 @@ export async function getFoldersFromBook(bookId: string, userId: string) {
 
   if (error) throw error;
   return data?.map(entry => entry.folders as unknown as Folder) ?? [];
+}
+
+export async function deleteFolder(folderId: string, userId: string) {
+  // get books in the folder to be deleted
+  const books = await getBooksInFolder(folderId, userId);
+  if (books.length > 0) {
+    throw new Error("Cannot delete folder with books in it. Please remove the books first.");
+  }
+
+  const { error } = await supabase
+    .from('folders')
+    .delete()
+    .eq('id', folderId)
+    .eq('user_id', userId);
+
+
+  if (error) throw error;
+  return true;
 }

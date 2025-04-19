@@ -8,9 +8,11 @@ export interface Book {
   isbn?: string | null;
   book_id?: string | null;
   cover_url?: string | null;
-  status: string;
+  status: BookStatus;
   created_at?: string;
 }
+
+export type BookStatus = 'reading' | 'completed' | 'wishlist';
 
 export interface Folder {
   id: string;

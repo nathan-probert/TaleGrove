@@ -23,9 +23,7 @@ export default function BookDetailPage() {
       setItem(fetchedItem);
 
       const volumeInfo = fetchedItem.volumeInfo;
-
       const userId = await getUserId();
-      let bookId: string | null = null; // Declare bookId here
 
       let foundIsbn: string | null = null;
       if (volumeInfo.industryIdentifiers) {
@@ -35,30 +33,39 @@ export default function BookDetailPage() {
       }
       const coverUrl = `https://books.google.com/books/publisher/content/images/frontcover/${fetchedItem.id}?fife=w400-h600&source=gbs_api`;
 
+      let bookData: any = null;
+      let isBookInCollection = false;
+
       if (userId) {
-        bookId = await checkIfBookInCollection(fetchedItem.id, userId); // Assign to the declared bookId
-        setIsInCollection(bookId !== null);
-      } else {
-        setIsInCollection(false);
-        setIsInCollection(false);
+        const foundBook = await checkIfBookInCollection(fetchedItem.id, userId);
+        if (foundBook) {
+          bookData = foundBook;
+          isBookInCollection = true;
+        }
       }
 
-      setBook({
-        id: bookId ?? null,
-        title: volumeInfo.title || 'No Title',
-        author: volumeInfo.authors ? volumeInfo.authors.join(', ') : 'Unknown Author',
-        rating: null,
-        notes: null,
-        user_id: userId ?? undefined,
-        status: "reading",
-        book_id: fetchedItem.id,
-        isbn: foundIsbn,
-        cover_url: coverUrl,
-      });
+      if (!isBookInCollection) {
+        // If not found in collection or no user, create book data from API response
+        bookData = {
+          id: null, // This will be set when added to the collection
+          title: volumeInfo.title || 'No Title',
+          author: volumeInfo.authors ? volumeInfo.authors.join(', ') : 'Unknown Author',
+          rating: null,
+          notes: null,
+          user_id: userId ?? undefined,
+          status: "reading", // Default status, can be changed
+          book_id: fetchedItem.id,
+          isbn: foundIsbn,
+          cover_url: coverUrl,
+        };
+      }
+
+      setBook(bookData);
+      setIsInCollection(isBookInCollection);
     };
 
     if (id) fetchBook();
-  }, [id]);
+  }, [id]); // Removed isInCollection from dependencies as it's set within the effect
 
   const handleBack = () => {
     router.back();

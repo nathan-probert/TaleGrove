@@ -25,6 +25,7 @@ export default function FolderCard({ folder, onFolderClick, refresh }: FolderCar
         accept: 'item',
         drop: (item: { id: string; folderId: string, type: string, info: Book }) => {
             console.log('Dropped item:', item);
+            console.log('Folder ID:', folder.id);
             if (item.info.user_id) {
                 addBookToFolder(item.id, item.folderId, folder.id, item.info.user_id).then(() => {
                     if (typeof refresh === 'function') {
