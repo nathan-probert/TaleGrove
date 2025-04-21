@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getUserId, checkIfBookInCollection, changeBookCover } from '@/lib/supabase';
+import { get } from 'http';
+import { getCoverUrl } from '@/lib/books_api';
 
 export default function BookCoversPage() {
     const params = useParams();
@@ -54,7 +56,7 @@ export default function BookCoversPage() {
                         const googleData = await googleRes.json();
                         if (googleData.items && googleData.items.length > 0) {
                             googleData.items.forEach((item: any) => {
-                                coverUrls.push(`https://books.google.com/books/publisher/content/images/frontcover/${item.id}?fife=w400-h600&source=gbs_api`);
+                                coverUrls.push(getCoverUrl(item.id));
                             });
                         }
                     }

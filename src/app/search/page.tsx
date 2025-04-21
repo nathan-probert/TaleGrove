@@ -1,50 +1,35 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { Book } from '@/types';
-import { SearchForm } from '@/components/search/SearchForm';
+import { Book, BookFromAPI, BookStatus } from '@/types';
 import { ResultsGrid } from '@/components/search/ResultsGrid';
-import { NoResults } from '@/components/search/NoResults';
 import { getUserId } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
+import { getCoverUrl, searchForBooks } from '@/lib/books_api';
 
-const MAX_RESULTS = 24;
 
 // Function to parse data for books
-const parseBookData = (data: any, userId: string | null): Book[] => {
-  if (!data || !data.items || !Array.isArray(data.items)) {
-    return [];
-  }
+const parseBookData = (data: BookFromAPI[], userId: string): Book[] => {
+  let books: Book[] = [];
 
-  const processedResults: Book[] = data.items.map((item: any): Book => {
-    const volumeInfo = item.volumeInfo || {};
-    const coverUrl = `https://books.google.com/books/publisher/content/images/frontcover/${item.id}?fife=w400-h600&source=gbs_api`;
-
-
-    let foundIsbn: string | null = null;
-    if (volumeInfo.industryIdentifiers && Array.isArray(volumeInfo.industryIdentifiers)) {
-      const isbn13 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13');
-      const isbn10 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10');
-      foundIsbn = isbn13?.identifier ?? isbn10?.identifier ?? null;
-    }
-
-    return {
+  for (const item of data) {
+    books.push({
       id: item.id,
-      title: volumeInfo.title || 'No Title',
-      author: volumeInfo.authors?.join(', ') || 'Unknown Author',
+      title: item.title,
+      author: item.authors,
       rating: null,
       notes: null,
-      user_id: userId ?? undefined,
-      status: "reading",
+      user_id: userId,
+      status: BookStatus.wishlist,
       book_id: item.id,
-      isbn: foundIsbn,
-      cover_url: coverUrl,
-    };
-  });
+      isbn: item.isbn,
+      cover_url: getCoverUrl(item.id),
+    });
+  };
 
-  return processedResults;
-};
+  return books;
+}
 
 
 export default function SearchBook() {
@@ -55,31 +40,20 @@ export default function SearchBook() {
 
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+
+    if (!title && !author) return;
     setLoading(true);
     setResults([]);
 
-    const queryParts = [];
-    if (title) queryParts.push(`intitle:${encodeURIComponent(title)}`);
-    if (author) queryParts.push(`inauthor:${encodeURIComponent(author)}`);
-
-    if (queryParts.length === 0) {
+    const userId = await getUserId();
+    if (!userId) {
+      console.error('User ID not found. Please log in.');
       setLoading(false);
       return;
     }
 
-    const query = `q=${queryParts.join('+')}`;
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY;
-
-    // Include fields parameter to request only necessary data
-    const fields = 'items(id,volumeInfo(title,authors,industryIdentifiers,imageLinks))';
-    const url = `https://www.googleapis.com/books/v1/volumes?${query}&maxResults=${MAX_RESULTS}&fields=${encodeURIComponent(fields)}&key=${apiKey}`;
-    const userId = await getUserId();
-
     try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-      const data = await response.json();
+      const data: BookFromAPI[] = await searchForBooks(title, author);
       const processedResults = parseBookData(data, userId);
 
       setResults(processedResults);

@@ -32,26 +32,12 @@ export type BookOrFolder =
   | (Book & { isFolder: false })
   | (Folder & { isFolder: true });
 
-export type GoogleBooksVolume = {
+export type BookFromAPI = {
   id: string;
-  volumeInfo: {
-    title: string;
-    authors?: string[];
-    publisher?: string;
-    description?: string;
-    industryIdentifiers?: {
-      type: string;
-      identifier: string;
-    }[];
-    pageCount?: number;
-    printedPageCount?: number;
-    printType?: string;
-    categories?: string[];
-    averageRating?: number;
-    ratingsCount?: number;
-    contentVersion?: string;
-    language?: string;
-  };
+  title: string;
+  authors: string;
+  description: string;
+  isbn: string;
 };
 
 export type UserBookData = {

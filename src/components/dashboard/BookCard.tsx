@@ -8,7 +8,6 @@ import { useRouter } from 'next/navigation';
 import { useDrag } from 'react-dnd';
 
 export default function BookCard({ book, folderId, parentFolderId, refresh }: { book: Book, folderId: string | null, parentFolderId: string | null, refresh: () => void }) {
-    console.log('Folder ID in BookCard:', folderId);
 
     const effectiveFolderId = folderId === '__go_up__' ? parentFolderId : folderId;
 

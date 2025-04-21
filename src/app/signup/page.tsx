@@ -26,7 +26,12 @@ export default function SignUp() {
         } else {
             const userId = data.user?.id;
             if (userId) {
-                await createRootFolder(userId);
+                if (data.user && data.user.identities && data.user.identities.length > 0) {
+                    await createRootFolder(userId);
+                } else {
+                    setError('Email already exists.');
+                    return;
+                }
             }
             router.replace('/');
             router.refresh();

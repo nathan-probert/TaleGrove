@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
-import { Book, GoogleBooksVolume, BookStatus, Folder } from "@/types";
+import { Book, BookStatus, Folder, BookFromAPI } from "@/types";
 import { getUserId, fetchUserFolders, addBook, addBookToFolders } from "@/lib/supabase";
+import { Router } from "lucide-react";
 
 interface BookNotInCollectionProps {
   book: Book;
-  item: GoogleBooksVolume;
+  item: BookFromAPI;
   onBack: () => void;
-  goToDashboard: () => void;
+  reload: () => void;
 }
 
 
-export default function BookNotInCollection({ book, item, onBack, goToDashboard }: BookNotInCollectionProps) {
-  const volumeInfo = item.volumeInfo;
+export default function BookNotInCollection({ book, item, onBack, reload }: BookNotInCollectionProps) {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>([]);
@@ -42,8 +42,7 @@ export default function BookNotInCollection({ book, item, onBack, goToDashboard 
     const data = await addBook(bookDataWithDetails as Book);
     await addBookToFolders(data.id, folderIds, book.user_id);
 
-    // Redirect to dashboard after adding
-    goToDashboard();
+    reload()
   }
 
   // Fetch folders on mount
@@ -127,8 +126,6 @@ export default function BookNotInCollection({ book, item, onBack, goToDashboard 
 
     try {
       await addBookToAllFolders(book, selectedFolderIds, selectedStatus, rating, notes);
-
-      alert(`${book.title} added to your collection!`);
       setIsModalOpen(false);
     } catch (error) {
       console.error("Error adding book:", error);
@@ -164,7 +161,7 @@ export default function BookNotInCollection({ book, item, onBack, goToDashboard 
       />
       <div
         className="text-gray-800 mb-4 prose prose-sm sm:prose" // Using prose for better text formatting
-        dangerouslySetInnerHTML={{ __html: volumeInfo.description || "No description available." }}
+        dangerouslySetInnerHTML={{ __html: item.description }}
       />
 
       {/* Add to Collection Button */}

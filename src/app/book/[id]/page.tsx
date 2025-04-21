@@ -5,7 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { getUserId, checkIfBookInCollection } from '@/lib/supabase';
 import BookInCollection from '@/components/BookInCollection';
 import BookNotInCollection from '@/components/BookNotInCollection';
-import { Book, GoogleBooksVolume } from '@/types';
+import { Book, BookFromAPI, BookStatus } from '@/types';
+import { getBookFromAPI, getCoverUrl } from '@/lib/books_api';
 import { Loader2 } from 'lucide-react';
 
 export default function BookDetailPage() {
@@ -18,42 +19,31 @@ export default function BookDetailPage() {
 
   useEffect(() => {
     const fetchBook = async () => {
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY;
-      const res = await fetch(`https://www.googleapis.com/books/v1/volumes/${id}?key=${apiKey}`);
-      const fetchedItem = await res.json() as GoogleBooksVolume;
+      const fetchedItem: BookFromAPI = await getBookFromAPI(id);
       setItem(fetchedItem);
 
-      const volumeInfo = fetchedItem.volumeInfo;
       const userId = await getUserId();
 
-      // Get ISBN
-      let foundIsbn: string | null = null;
-      if (volumeInfo.industryIdentifiers) {
-        const isbn13 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13');
-        const isbn10 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10');
-        foundIsbn = isbn13?.identifier ?? isbn10?.identifier ?? null;
-      }
-
       // Get cover URL
-      const coverUrl = `https://books.google.com/books/publisher/content/images/frontcover/${fetchedItem.id}?fife=w400-h600&source=gbs_api`;
+      const coverUrl = getCoverUrl(id);
 
       // Get or create book object
       if (userId) {
-        const foundBook = await checkIfBookInCollection(fetchedItem.id, userId);
+        const foundBook = await checkIfBookInCollection(id, userId);
         if (foundBook) {
           setIsInCollection(true);
           setBook(foundBook);
         } else {
           const bookData = {
             id: "placeholder",
-            title: volumeInfo.title || 'No Title',
-            author: volumeInfo.authors ? volumeInfo.authors.join(', ') : 'Unknown Author',
+            title: fetchedItem.title,
+            author: fetchedItem.authors,
             rating: null,
             notes: null,
             user_id: userId,
-            status: "wishlist",
+            status: BookStatus.wishlist,
             book_id: fetchedItem.id,
-            isbn: foundIsbn,
+            isbn: fetchedItem.isbn,
             cover_url: coverUrl,
           } as Book;
           setBook(bookData);
@@ -69,9 +59,9 @@ export default function BookDetailPage() {
     router.back();
   };
 
-  const goToDashboard = () => {
-    router.push('/books');
-  }
+  const reload = () => {
+    window.location.reload();
+  };
 
   // While loading api responses, show a loading message
   if (!book || !item) {
@@ -85,9 +75,9 @@ export default function BookDetailPage() {
   return (
     <>
       {isInCollection ? (
-        <BookInCollection book={book} item={item} onBack={handleBack} goToDashboard={goToDashboard} />
+        <BookInCollection book={book} item={item} onBack={handleBack} reload={reload} />
       ) : (
-        <BookNotInCollection book={book} item={item} onBack={handleBack} goToDashboard={goToDashboard} />
+        <BookNotInCollection book={book} item={item} onBack={handleBack} reload={reload} />
       )}
     </>
   );

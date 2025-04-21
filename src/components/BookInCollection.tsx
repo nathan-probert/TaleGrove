@@ -1,4 +1,4 @@
-import { Book, BookStatus, Folder, GoogleBooksVolume } from "@/types";
+import { Book, BookStatus, Folder, BookFromAPI } from "@/types";
 import { getUserId, deleteBook, removeBookFromFolders, getFoldersFromBook, updateBookDetails } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 import { Loader2, ArrowLeft, FolderIcon, Trash2, ImageIcon, Edit } from "lucide-react";
@@ -6,12 +6,12 @@ import { useRouter } from "next/navigation";
 
 interface BookInCollectionProps {
   book: Book;
-  item: GoogleBooksVolume;
+  item: BookFromAPI;
   onBack: () => void;
-  goToDashboard: () => void;
+  reload: () => void;
 }
 
-export default function BookInCollection({ book, item, onBack, goToDashboard }: BookInCollectionProps) {
+export default function BookInCollection({ book, item, onBack, reload }: BookInCollectionProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>([]);
@@ -23,7 +23,6 @@ export default function BookInCollection({ book, item, onBack, goToDashboard }: 
   const [editedNotes, setEditedNotes] = useState<string>(book.notes || '');
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const descriptionHtml = item.volumeInfo.description ?? "";
   const router = useRouter();
 
   const statusOptions: { value: BookStatus; label: string }[] = [
@@ -111,8 +110,6 @@ export default function BookInCollection({ book, item, onBack, goToDashboard }: 
       if (remainingFolders.length === 0) {
         await deleteBook(book.id ?? "", userId);
       }
-
-      goToDashboard();
     } catch (error) {
       console.error("Error removing book:", error);
       alert(`Failed to remove book: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -120,6 +117,8 @@ export default function BookInCollection({ book, item, onBack, goToDashboard }: 
       setIsRemoving(false);
       setIsModalOpen(false);
     }
+
+    reload();
   };
 
   const handleChangeCover = () => {
@@ -204,15 +203,13 @@ export default function BookInCollection({ book, item, onBack, goToDashboard }: 
             </div>
 
             {/* Full Description */}
-            {descriptionHtml && (
-              <div>
-                <h3 className="text-xl font-semibold text-foreground mb-3">Description</h3>
-                <div
-                  className="prose prose-sm max-w-none text-foreground"
-                  dangerouslySetInnerHTML={{ __html: descriptionHtml }}
-                />
-              </div>
-            )}
+            <div>
+              <h3 className="text-xl font-semibold text-foreground mb-3">Description</h3>
+              <div
+                className="prose prose-sm max-w-none text-foreground"
+                dangerouslySetInnerHTML={{ __html: item.description }}
+              />
+            </div>
 
             {/* Remove Button */}
             <button

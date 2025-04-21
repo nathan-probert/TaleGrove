@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import BookList from '@/components/dashboard/BookList';
 import { BookOrFolder, Folder } from '@/types';
 import { fetchUserBooksAndFolders } from '@/lib/getBooks';
-import supabase, { createFolder, getRootId, deleteFolder } from '@/lib/supabase'; // Import deleteFolder
+import supabase, { createFolder, getRootId, deleteFolder, getCurrentUser } from '@/lib/supabase'; // Import deleteFolder
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Loader2, Trash2 } from 'lucide-react'; // Import Trash2 icon
@@ -12,7 +12,7 @@ import { Loader2, Trash2 } from 'lucide-react'; // Import Trash2 icon
 
 export default function Books() {
     const params = useParams();
-    const slugArray = Array.isArray(params.slug) ? params.slug : params.slug ? [params.slug] : [];
+    const slugArray = params?.slug ? (Array.isArray(params.slug) ? params.slug : [params.slug]) : [];
 
     const [books, setBooks] = useState<BookOrFolder[]>([]);
     const [userId, setUserId] = useState<string | null>(null);
@@ -33,38 +33,26 @@ export default function Books() {
         const crumbs: { id: string | null, name: string, slug: string | null }[] = [{ id: null, name: 'Home', slug: null }];
 
         for (const slug of slugPath) {
-            let sanitizedParentId = parentId === 'null' ? null : parentId;
-            console.log(`Resolving folder for slug: ${slug}, userId: ${userId}, parentId: ${sanitizedParentId}`);
-
             let query = supabase
                 .from('folders')
                 .select('id, name, slug')
                 .eq('slug', slug)
                 .eq('user_id', userId);
 
+            // Handle root folder case
+            if (parentId === null) {
+                parentId = await getRootId(userId);
+            } 
 
-            if (sanitizedParentId === null) {
-                sanitizedParentId = await getRootId(userId);
-                // Ensure root ID is fetched before querying with it
-                if (!sanitizedParentId) {
-                    console.error("Could not fetch root folder ID for user:", userId);
-                    return { folderId: null, breadcrumbs: crumbs }; // Or handle error appropriately
-                }
-                query = query.eq('parent_id', sanitizedParentId);
-            } else {
-                query = query.eq('parent_id', sanitizedParentId);
-            }
+            query = query.eq('parent_id', parentId);
             if (!parentFolderId) {
-                setParentFolderId(sanitizedParentId);
+                setParentFolderId(parentId);
             }
             const result = await query.single();
-
             const data = result.data as Pick<Folder, 'id' | 'name' | 'slug'> | null;
-            const error = result.error;
 
-            if (error || !data) {
-                console.warn(`Folder not found for slug: ${slug}, parentId: ${sanitizedParentId}`, error);
-                // If a folder in the path is not found, stop resolving and return null
+            if (!data) {
+                console.warn(`Folder not found for slug: ${slug}, parentId: ${parentId}`);
                 return { folderId: null, breadcrumbs: crumbs };
             }
 
@@ -80,42 +68,30 @@ export default function Books() {
         try {
             let { folderId, breadcrumbs: resolvedBreadcrumbs } = await resolveFolderPath(userId, slugPath);
 
-            // If the path is valid but leads nowhere (e.g., /books/non-existent-folder)
-            // or if the path is invalid from the start (e.g., /books/invalid/path)
+            // For invalid paths, redirect to /books
             if (slugPath.length > 0 && folderId === null) {
                 console.warn(`Path resolution failed for slugs: ${slugPath.join('/')}. Redirecting to /books.`);
                 router.push('/books');
-                return; // Stop execution here
+                return;
             }
 
+            // Handle root
             setIsRoot(false);
-            if (folderId === null && slugPath.length === 0) { // Only set root if no slugs and folderId is null
-                const rootId = await getRootId(userId);
-                if (rootId) {
-                    folderId = rootId;
-                    setIsRoot(true);
-                    // Ensure breadcrumbs only contain 'Home' for the root
-                    resolvedBreadcrumbs = [{ id: null, name: 'Home', slug: null }];
-                } else {
-                    console.error("Root folder ID not found for user:", userId);
-                    // Handle case where root folder doesn't exist or couldn't be fetched
-                    router.push('/signin'); // Or show an error message
-                    return;
-                }
+            if (folderId === null && slugPath.length === 0) {
+                folderId = await getRootId(userId);
+                setIsRoot(true);
+                resolvedBreadcrumbs = [{ id: null, name: 'Home', slug: null }];
             }
 
             setCurrentFolderId(folderId);
             setBreadcrumbs(resolvedBreadcrumbs);
 
-            console.log("Folder ID:", folderId);
-            if (folderId) { // Fetch content only if we have a valid folder ID
+            if (folderId) {
                 const combined = await fetchUserBooksAndFolders(userId, folderId);
                 setBooks(combined);
-                console.log("Fetched books and folders:", combined);
             }
         } catch (error) {
             console.error('Error loading data:', error);
-            // Optionally redirect to a safe page or show an error message
             router.push('/books');
         } finally {
             setIsLoading(false);
@@ -123,16 +99,18 @@ export default function Books() {
     };
 
 
+    // Check if user is logged in and fetch data
     useEffect(() => {
         const initializeAuth = async () => {
             setIsLoading(true);
             try {
-                const { data: { user } } = await supabase.auth.getUser();
+                const user = await getCurrentUser();
                 if (!user) {
                     router.push('/signin');
                     return;
                 }
                 setUserId(user.id);
+                await fetchData(user.id, slugArray);
             } catch (error) {
                 console.error("Auth Error:", error);
                 router.push('/signin');
@@ -142,24 +120,17 @@ export default function Books() {
         };
 
         initializeAuth();
-    }, [router]);
-
-    useEffect(() => {
-        if (userId) {
-            fetchData(userId, slugArray);
-        }
-    }, [userId, slugArray.join('/')]);
+    }, [router, slugArray.join('/')]);
 
 
+    // Handle folder click (pass this down to BookList)
     const handleFolderClick = (folderId: string) => {
-        console.log("Books:", books);
         const clickedFolder = books.find(item => item.isFolder && item.id === folderId) as Folder | undefined;
 
         if (clickedFolder?.slug) {
             const newPath = [...slugArray, clickedFolder.slug].join('/');
             router.push(`/books/${newPath}`);
         } else if (folderId) {
-            // handle up function
             if (breadcrumbs.length > 1) {
                 const parentCrumb = breadcrumbs[breadcrumbs.length - 2];
                 handleBreadcrumbClick(parentCrumb);
@@ -172,10 +143,10 @@ export default function Books() {
     const handleBreadcrumbClick = (crumb: { id: string | null, slug: string | null }) => {
         if (!userId) return;
         const index = breadcrumbs.findIndex(c => c.id === crumb.id);
-        // Ensure index is valid before slicing
+
+        // Handle root
         if (index === -1) {
-            console.error("Breadcrumb not found:", crumb);
-            router.push('/books'); // Navigate to root as a fallback
+            router.push('/books');
             return;
         }
         const path = breadcrumbs.slice(1, index + 1).map(c => c.slug).filter(Boolean).join('/');
@@ -183,7 +154,7 @@ export default function Books() {
     };
 
     const handleCreateFolder = async () => {
-        if (!userId || !currentFolderId) { // Ensure currentFolderId is also available
+        if (!userId || !currentFolderId) {
             console.error("User not logged in or current folder ID missing");
             return;
         }
@@ -191,11 +162,10 @@ export default function Books() {
         const folderName = window.prompt("Enter new folder name:");
         if (!folderName?.trim()) return;
 
-        // const newSlug = slugify(folderName); // Slug generation handled by createFolder
         setIsLoading(true);
         try {
-            await createFolder(folderName, userId, currentFolderId); // Pass currentFolderId as parent
-            await fetchData(userId, slugArray); // Refresh current view
+            await createFolder(folderName, userId, currentFolderId);
+            await fetchData(userId, slugArray);
         } catch (error) {
             console.error('Error creating folder:', error);
             alert(`Failed to create folder. ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -212,22 +182,18 @@ export default function Books() {
 
         const currentFolderName = breadcrumbs[breadcrumbs.length - 1]?.name || 'this folder';
         const confirmation = window.confirm(`Are you sure you want to delete "${currentFolderName}" and all its contents? This action cannot be undone.`);
-
         if (!confirmation) return;
 
         setIsDeleting(true);
-        setIsLoading(true); // Also set general loading state
+        setIsLoading(true);
         try {
             await deleteFolder(currentFolderId, userId);
-
-            // Navigate to the parent folder after deletion
             const parentCrumb = breadcrumbs[breadcrumbs.length - 2];
             if (parentCrumb) {
                 handleBreadcrumbClick(parentCrumb);
             } else {
-                router.push('/books'); // Go to root if parent doesn't exist (shouldn't happen if not root)
+                router.push('/books');
             }
-            // No need to call fetchData here as navigation will trigger it
         } catch (error) {
             console.error('Error deleting folder:', error);
             alert(`Failed to delete folder. ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -282,7 +248,7 @@ export default function Books() {
 
 
                 {/* Breadcrumbs */}
-                {breadcrumbs.length > 0 && ( // Show breadcrumbs even if only 'Home' is present
+                {breadcrumbs.length > 1 && (
                     <div className="mb-6">
                         <nav className="flex" aria-label="Breadcrumb">
                             <ol className="flex items-center space-x-2 text-sm">

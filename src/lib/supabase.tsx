@@ -75,7 +75,6 @@ export async function addBook(bookData: Book): Promise<Book> {
 }
 
 export async function deleteBook(bookId: string, userId: string) {
-  console.log('Deleting book with ID:', bookId, 'for user ID:', userId);
 
   const { error, count } = await supabase
     .from('books')
@@ -94,18 +93,17 @@ export async function deleteBook(bookId: string, userId: string) {
 export async function checkIfBookInCollection(bookId: string, userId: string): Promise<Book | null> {
   const { data, error } = await supabase
     .from('books')
-    .select('*') // Select all columns to get the full Book object
+    .select('*')
     .eq('user_id', userId)
-    .eq('book_id', bookId) // Filter by the external book_id
-    .limit(1)
-    .single(); // Use single() to get one record or null
+    .eq('book_id', bookId)
+    .maybeSingle(); // returns null if not found, without error
 
-  if (error && error.code !== 'PGRST116') { // Ignore 'PGRST116' (No rows found)
+  if (error) {
     console.error('Error checking book collection:', error);
     throw error;
   }
 
-  return data as Book | null; // Return the full Book object or null if not found
+  return data as Book | null;
 }
 
 export async function updateBookDetails(
@@ -128,7 +126,6 @@ export async function updateBookDetails(
 }
 
 export async function changeBookCover(bookId: string, userId: string, coverUrl: string) {
-  console.log('Changing cover for book with ID:', bookId, 'to URL:', coverUrl, 'for user ID:', userId);
   const { error } = await supabase
     .from('books')
     .update({ cover_url: coverUrl })
@@ -280,7 +277,7 @@ export async function getUserFolders(userId: string) {
 export async function fetchUserFolders(userId: string): Promise<Folder[]> {
   const { data, error } = await supabase
     .from('folders')
-    .select('*') // Select all columns to match the Folder type
+    .select('*')
     .eq('user_id', userId);
 
   if (error) {

@@ -19,7 +19,6 @@ interface Props {
 
 export default function BookList({ items, onFolderClick, folderId, parentFolderId, parentFolderSlug, refresh, breadcrumbs = [], isRoot }: Props) {
   const parentCrumb = breadcrumbs[breadcrumbs.length - 2];
-  console.log("Is Root? ", isRoot);
 
   // Explicitly type goUpFolder as Folder
   const goUpFolder: Folder & { isFolder: true } = {
@@ -27,7 +26,6 @@ export default function BookList({ items, onFolderClick, folderId, parentFolderI
     name: '⬅️ Go Up',
     slug: parentFolderSlug ?? 'null',
     user_id: '',
-    created_at: '',
     parent_id: null,
     isFolder: true, // Ensure this is explicitly true
   };
@@ -55,7 +53,6 @@ export default function BookList({ items, onFolderClick, folderId, parentFolderI
               }}
               refresh={() => {
                 if (folder.id === '__go_up__' && parentCrumb) {
-                  console.log('Parent crumb:', parentCrumb);
                   refresh();
                 } else {
                   refresh();
