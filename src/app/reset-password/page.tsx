@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import supabase from '@/lib/supabase';
+import supabase, { getSession, updatePassword } from '@/lib/supabase';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -16,27 +16,19 @@ export default function ResetPassword() {
 
     useEffect(() => {
         const handleInitialSession = async () => {
-            const { data, error } = await supabase.auth.getSession();
+            const { data, error } = await getSession();
             if (!data?.session && !error) {
-                await supabase.auth.getSession(); // retry to ensure it's loaded
+                await getSession();
             }
         };
         handleInitialSession();
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'PASSWORD_RECOVERY') {
-                // nothing needed, Supabase handles session
-            }
-        });
-
-        return () => subscription?.unsubscribe();
     }, []);
 
     const handleResetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
 
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await getSession();
         if (!session) {
             setError('No active session. Please try the reset link again.');
             setLoading(false);
@@ -53,7 +45,7 @@ export default function ResetPassword() {
         setLoading(true);
 
         try {
-            const { error } = await supabase.auth.updateUser({ password });
+            const { error } = await updatePassword(password);
             if (error) throw error;
 
             setSuccess(true);

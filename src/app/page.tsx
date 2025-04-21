@@ -3,27 +3,23 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser } from '@/lib/supabase';
-import type { User } from '@supabase/supabase-js';
+import { Loader2 } from 'lucide-react';
 
 
 export default function Home() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const checkUser = async () => {
       try {
-        const currentUser = await getCurrentUser();
-        setUser(currentUser);
-        if (currentUser) {
+        if (await getCurrentUser()) {
           router.replace('/books');
         } else {
           router.replace('/signin');
         }
       } catch (error) {
         console.error("Error fetching user:", error);
-        // Handle error appropriately, maybe redirect to an error page or signin
         router.replace('/signin');
       } finally {
         setIsLoading(false);
@@ -31,13 +27,15 @@ export default function Home() {
     };
 
     checkUser();
-  }, [router]); // Only run once on mount, router dependency is stable
+  }, [router]);
 
-  // Optional: Render a loading indicator while checking auth status
   if (isLoading) {
-    return <div>Loading...</div>; // Or a spinner component
+    return (
+      <div className="flex justify-center items-center py-10">
+        <Loader2 className="text-primary animate-spin" />
+      </div>
+    );
   }
 
-  // Render null while redirecting (or loading state handles this)
   return null;
 }

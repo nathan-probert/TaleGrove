@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import supabase, { createRootFolder, getUserId } from '@/lib/supabase';
+import { createRootFolder, signUpWithEmail, } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -18,19 +18,18 @@ export default function SignUp() {
         setError(null);
         setLoading(true);
 
-        const { error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
-        });
+        const { data, error: signUpError } = await signUpWithEmail(email, password);
 
         setLoading(false);
-
         if (signUpError) {
             setError(signUpError.message);
         } else {
-            const userId = await getUserId();
-            await createRootFolder(userId ?? '');
-            router.push('/books');
+            const userId = data.user?.id;
+            if (userId) {
+                await createRootFolder(userId);
+            }
+            router.replace('/');
+            router.refresh();
         }
     };
 
@@ -38,6 +37,7 @@ export default function SignUp() {
         <div className="min-h-screen bg-gradient-to-br from-background to-grey3 flex items-center justify-center p-4">
             <div className="w-full max-w-md bg-background rounded-xl shadow-lg p-8 border border-grey4">
                 <div className="flex flex-col items-center space-y-6">
+
                     {/* Logo Container */}
                     <div className="transition-transform hover:scale-105">
                         <Image

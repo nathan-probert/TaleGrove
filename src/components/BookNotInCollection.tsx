@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Book, GoogleBooksVolume } from "@/types";
+import { Book, GoogleBooksVolume, BookStatus, Folder } from "@/types";
 import { getUserId, fetchUserFolders, addBook, addBookToFolders } from "@/lib/supabase";
 
 interface BookNotInCollectionProps {
@@ -9,25 +9,18 @@ interface BookNotInCollectionProps {
   goToDashboard: () => void;
 }
 
-interface Folder {
-  id: string;
-  name: string;
-}
-
-type BookStatus = 'wishlist' | 'reading' | 'completed';
 
 export default function BookNotInCollection({ book, item, onBack, goToDashboard }: BookNotInCollectionProps) {
   const volumeInfo = item.volumeInfo;
   const [folders, setFolders] = useState<Folder[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>([]);
-  const [selectedStatus, setSelectedStatus] = useState<BookStatus>('wishlist'); // Default status
-  const [rating, setRating] = useState<number | null>(null); // State for rating
-  const [notes, setNotes] = useState<string>(''); // State for notes
+  const [selectedStatus, setSelectedStatus] = useState<BookStatus>(BookStatus.wishlist);
+  const [rating, setRating] = useState<number | null>(null);
+  const [notes, setNotes] = useState<string>('');
   const [isLoadingFolders, setIsLoadingFolders] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
 
-  // Updated to include rating and notes
   const addBookToAllFolders = async (
     book: Book,
     folderIds: string[],
@@ -40,18 +33,16 @@ export default function BookNotInCollection({ book, item, onBack, goToDashboard 
       ...book,
       status: status,
     };
-
-    if (status === 'completed') {
-      // Assuming Book type has optional rating (number | null) and notes (string) fields
+    if (status === BookStatus.completed) {
       bookDataWithDetails.rating = rating;
       bookDataWithDetails.notes = notes;
     }
 
-    // Pass the potentially augmented book data to addBook
-    // Note: Ensure the addBook function and your database schema can handle these fields
-    const data = await addBook(bookDataWithDetails as Book); // Cast needed if Book type isn't updated yet
-    await addBookToFolders(data.id ?? "no_book_id", folderIds, book.user_id ?? "no_user_id");
+    // Add book to folder
+    const data = await addBook(bookDataWithDetails as Book);
+    await addBookToFolders(data.id, folderIds, book.user_id);
 
+    // Redirect to dashboard after adding
     goToDashboard();
   }
 
@@ -64,6 +55,7 @@ export default function BookNotInCollection({ book, item, onBack, goToDashboard 
         setIsLoadingFolders(false);
         return;
       }
+
       try {
         const folderData = await fetchUserFolders(userId);
         setFolders([...folderData]);
@@ -82,11 +74,13 @@ export default function BookNotInCollection({ book, item, onBack, goToDashboard 
       alert("Please log in to add books to your collection.");
       return;
     }
+
+    // Have 'Root' folder selected by default
     const rootFolder = folders.find(folder => folder.name === 'Root');
     setSelectedFolderIds(rootFolder ? [rootFolder.id] : []);
-    setSelectedStatus('wishlist');
-    setRating(null); // Reset rating
-    setNotes(''); // Reset notes
+
+    setRating(null);
+    setNotes('');
     setIsModalOpen(true);
   };
 
@@ -105,8 +99,9 @@ export default function BookNotInCollection({ book, item, onBack, goToDashboard 
   const handleStatusChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newStatus = event.target.value as BookStatus;
     setSelectedStatus(newStatus);
+
     // Reset rating and notes if status changes away from 'completed'
-    if (newStatus !== 'completed') {
+    if (newStatus !== BookStatus.completed) {
       setRating(null);
       setNotes('');
     }
@@ -115,7 +110,7 @@ export default function BookNotInCollection({ book, item, onBack, goToDashboard 
   // Handler for the "Add Now" button in the modal
   const handleAddNow = async () => {
     setIsAdding(true);
-    const userId = await getUserId(); // Re-check userId just in case
+    const userId = await getUserId();
     if (!userId) {
       alert("Session expired. Please log in again.");
       setIsModalOpen(false);
@@ -123,21 +118,18 @@ export default function BookNotInCollection({ book, item, onBack, goToDashboard 
       return;
     }
 
-    // Basic validation for rating if status is completed
-    if (selectedStatus === 'completed' && rating !== null && (rating < 1 || rating > 10)) {
+    // Verify rating exists for 'completed' status
+    if (selectedStatus === BookStatus.completed && rating !== null && (rating < 1 || rating > 10)) {
       alert("Rating must be between 1 and 10.");
       setIsAdding(false);
       return;
     }
 
-
     try {
-      // Pass the selected status, rating, and notes along with book and folders
       await addBookToAllFolders(book, selectedFolderIds, selectedStatus, rating, notes);
 
       alert(`${book.title} added to your collection!`);
-      setIsModalOpen(false); // Close modal on success
-
+      setIsModalOpen(false);
     } catch (error) {
       console.error("Error adding book:", error);
       alert(`Failed to add book: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -147,9 +139,9 @@ export default function BookNotInCollection({ book, item, onBack, goToDashboard 
   };
 
   const statusOptions: { value: BookStatus; label: string }[] = [
-    { value: 'wishlist', label: 'Wishlist' },
-    { value: 'reading', label: 'Reading' },
-    { value: 'completed', label: 'Completed' },
+    { value: BookStatus.wishlist, label: 'Wishlist' },
+    { value: BookStatus.reading, label: 'Reading' },
+    { value: BookStatus.completed, label: 'Completed' },
   ];
 
   return (

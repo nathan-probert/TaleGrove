@@ -2,8 +2,8 @@ import '../styles/globals.css';
 import { ReactNode } from 'react';
 
 export const metadata = {
-  title: 'Bookmate',
-  description: 'AI-powered book recommendation app',
+  title: 'TaleGrove',
+  description: 'AI-powered book recommendation and tracker app',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

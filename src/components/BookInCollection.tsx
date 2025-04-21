@@ -1,4 +1,4 @@
-import { Book, Folder, GoogleBooksVolume } from "@/types";
+import { Book, BookStatus, Folder, GoogleBooksVolume } from "@/types";
 import { getUserId, deleteBook, removeBookFromFolders, getFoldersFromBook, updateBookDetails } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 import { Loader2, ArrowLeft, FolderIcon, Trash2, ImageIcon, Edit } from "lucide-react";
@@ -11,8 +11,6 @@ interface BookInCollectionProps {
   goToDashboard: () => void;
 }
 
-type BookStatus = 'wishlist' | 'reading' | 'completed';
-
 export default function BookInCollection({ book, item, onBack, goToDashboard }: BookInCollectionProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -20,7 +18,7 @@ export default function BookInCollection({ book, item, onBack, goToDashboard }: 
   const [isLoadingFolders, setIsLoadingFolders] = useState(true);
   const [isRemoving, setIsRemoving] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editedStatus, setEditedStatus] = useState<BookStatus>(book.status || 'wishlist');
+  const [editedStatus, setEditedStatus] = useState<BookStatus>(book.status || BookStatus.wishlist);
   const [editedRating, setEditedRating] = useState<number | null>(book.rating || null);
   const [editedNotes, setEditedNotes] = useState<string>(book.notes || '');
   const [isUpdating, setIsUpdating] = useState(false);
@@ -29,18 +27,19 @@ export default function BookInCollection({ book, item, onBack, goToDashboard }: 
   const router = useRouter();
 
   const statusOptions: { value: BookStatus; label: string }[] = [
-    { value: 'wishlist', label: 'Wishlist' },
-    { value: 'reading', label: 'Reading' },
-    { value: 'completed', label: 'Completed' },
+    { value: BookStatus.wishlist, label: 'Wishlist' },
+    { value: BookStatus.reading, label: 'Reading' },
+    { value: BookStatus.completed, label: 'Completed' },
   ];
 
   useEffect(() => {
     const loadFolders = async () => {
       setIsLoadingFolders(true);
       const userId = await getUserId();
+
       if (userId) {
         try {
-          const folderData = await getFoldersFromBook(book.id ?? "", userId);
+          const folderData = await getFoldersFromBook(book.id, userId);
           setFolders(folderData);
         } catch (error) {
           console.error("Failed to fetch folders:", error);
@@ -53,9 +52,9 @@ export default function BookInCollection({ book, item, onBack, goToDashboard }: 
 
   const getStatusColor = (status: BookStatus) => {
     switch (status) {
-      case 'wishlist': return 'text-yellow-600';
-      case 'reading': return 'text-blue-600';
-      case 'completed': return 'text-green-600';
+      case BookStatus.wishlist: return 'text-yellow-600';
+      case BookStatus.reading: return 'text-blue-600';
+      case BookStatus.completed: return 'text-green-600';
       default: return 'text-gray-600';
     }
   };
@@ -63,7 +62,7 @@ export default function BookInCollection({ book, item, onBack, goToDashboard }: 
   const handleStatusChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newStatus = event.target.value as BookStatus;
     setEditedStatus(newStatus);
-    if (newStatus !== 'completed') {
+    if (newStatus !== BookStatus.completed) {
       setEditedRating(null);
       setEditedNotes('');
     }

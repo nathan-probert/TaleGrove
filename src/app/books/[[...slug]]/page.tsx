@@ -8,10 +8,7 @@ import supabase, { createFolder, getRootId, deleteFolder } from '@/lib/supabase'
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Loader2, Trash2 } from 'lucide-react'; // Import Trash2 icon
-import { p } from 'framer-motion/client';
 
-const slugify = (str: string) =>
-    str.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
 
 export default function Books() {
     const params = useParams();
@@ -136,26 +133,22 @@ export default function Books() {
                     return;
                 }
                 setUserId(user.id);
-                // No need to await fetchData here if useEffect dependency handles it
             } catch (error) {
                 console.error("Auth Error:", error);
                 router.push('/signin');
             } finally {
-                // Set loading false only after auth check, fetchData will manage its own loading state
-                // setIsLoading(false); // Removed this line
+                setIsLoading(false);
             }
         };
 
         initializeAuth();
-    }, [router]); // Depend only on router for initial auth check
+    }, [router]);
 
     useEffect(() => {
-        // Fetch data whenever userId or slugArray changes
         if (userId) {
             fetchData(userId, slugArray);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [userId, slugArray.join('/')]); // Re-run fetchData when userId is set or slug changes
+    }, [userId, slugArray.join('/')]);
 
 
     const handleFolderClick = (folderId: string) => {
@@ -245,7 +238,7 @@ export default function Books() {
     };
 
 
-    if (isLoading && !books.length && !isDeleting) { // Avoid showing skeleton loader during delete operation
+    if (isLoading && !books.length && !isDeleting) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-background to-grey3 p-8">
                 <div className="max-w-7xl mx-auto">

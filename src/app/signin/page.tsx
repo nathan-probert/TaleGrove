@@ -11,17 +11,15 @@ import Image from 'next/image';
 const getFriendlyErrorMessage = (error: AuthError | null): string | null => {
     if (!error) return null;
 
-    console.error('Sign-in error:', error); // Log the original error for debugging
+    console.error('Sign-in error:', error);
 
     if (error.message.includes('Invalid login credentials')) {
         return 'Invalid email or password. Please try again.';
     }
-    if (error.message.includes('Email not confirmed')) {
+    else if (error.message.includes('Email not confirmed')) {
         return 'Please confirm your email address before signing in.';
     }
-    // Add more specific error mappings as needed
 
-    // Fallback generic message
     return 'An unexpected error occurred. Please try again later.';
 };
 
@@ -49,13 +47,14 @@ export default function SignIn() {
     };
 
     const isLoading = isPending;
-
     const [showPassword, setShowPassword] = useState(false);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-background to-grey3 flex items-center justify-center px-4">
             <div className="w-full max-w-md bg-background rounded-2xl shadow-lg p-4 transition-all duration-300 hover:shadow-xl">
                 <div className="flex flex-col items-center space-y-6">
+
+                    {/* Logo Container */}
                     <div className="transition-transform hover:scale-105">
                         <Image
                             src="/images/colour_logo.png"
@@ -67,6 +66,8 @@ export default function SignIn() {
                         />
                     </div>
 
+
+                    {/* Heading */}
                     <div className="text-center">
                         <h1 className="text-3xl font-bold text-foreground">
                             Welcome Back
@@ -74,6 +75,7 @@ export default function SignIn() {
                     </div>
                 </div>
 
+                {/* Sign In Form */}
                 <form onSubmit={handleSignIn} className="space-y-6 pt-6">
                     {error && (
                         <div className="flex items-center p-4 bg-grey5 rounded-lg border border-grey4">
@@ -84,6 +86,7 @@ export default function SignIn() {
                         </div>
                     )}
 
+                    {/* Email Input */}
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-2">
                             Email address
@@ -101,6 +104,7 @@ export default function SignIn() {
                         </div>
                     </div>
 
+                    {/* Password Input */}
                     <div>
                         <label className="block text-sm font-medium text-foreground mb-2">
                             Password
@@ -132,6 +136,8 @@ export default function SignIn() {
                                 )}
                             </button>
                         </div>
+
+                        {/* Forgot Password Link */}
                         <div className="text-right mt-2">
                             <Link href="/forgot-password" className="text-sm text-primary hover:text-secondary">
                                 Forgot password?
@@ -139,6 +145,7 @@ export default function SignIn() {
                         </div>
                     </div>
 
+                    {/* Sign In Button */}
                     <button
                         type="submit"
                         disabled={isLoading}
@@ -154,6 +161,8 @@ export default function SignIn() {
                         )}
                     </button>
 
+
+                    {/* Divider */}
                     <div className="relative mt-8">
                         <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-grey4"></div>
@@ -163,6 +172,7 @@ export default function SignIn() {
                         </div>
                     </div>
 
+                    {/* Social Sign In Buttons */}
                     <div className="grid grid-cols-2 gap-3 mt-6">
                         <button
                             type="button"
@@ -184,6 +194,7 @@ export default function SignIn() {
                         </button>
                     </div>
 
+                    {/* Sign Up Link */}
                     <p className="text-center text-sm text-grey2 mt-6">
                         Don't have an account?{' '}
                         <Link href="/signup" className="font-medium text-primary hover:text-secondary">
