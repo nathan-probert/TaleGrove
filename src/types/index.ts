@@ -40,16 +40,32 @@ export type BookFromAPI = {
   isbn: string;
 };
 
+// export type UserBookData = {
+//   title: string;
+//   author: string;
+//   status: BookStatus;
+//   rating?: number | null;
+//   notes?: string | null;
+//   dateRead?: string | null;
+// }
 export type UserBookData = {
   title: string;
   author: string;
   status: BookStatus;
   rating?: number | null;
-  notes?: string | null;
-  dateRead?: string | null;
+  notes?: string | null; // took out date_read for now
 }
 
 export type BookRecommendation = {
   title: string;
   author: string;
+}
+
+export type OpenLibraryRecommendationInfo = {
+  title: string;
+  authors: string;
+  coverUrl: string;
+  description: string;
+  categories: string[];
+  publishYear: string;
 }

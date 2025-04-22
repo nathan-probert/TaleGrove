@@ -2,7 +2,8 @@
 
 // UPDATE: USING GOOGLE BOOKS API FOR NOW, OPENLIBRARY IS MORE CUBERSOME AS I HAVE TO MAKE MULTIPLE CALLS TO GET THE DATA I NEED
 
-import { BookFromAPI } from "@/types";
+import { BookFromAPI, OpenLibraryRecommendationInfo } from "@/types";
+import { desc } from "framer-motion/client";
 
 
 const useGoogle = true;
@@ -89,13 +90,18 @@ export async function searchForBooks(title: string, author: string, maxResults: 
         const query = `q=${queryParts.join('+')}`;
 
         // Include fields parameter to request only necessary data
-        const fields = 'items(id,volumeInfo(title,authors))';
+        const fields = 'items(id,volumeInfo(title,authors, description))';
         const url = `https://www.googleapis.com/books/v1/volumes?${query}&maxResults=${maxResults}&langRestrict=en&fields=${encodeURIComponent(fields)}&key=${googleApiKey}`;
 
         const res = await fetch(url);
         const fetchedItems = await res.json();
 
         let processedResults: BookFromAPI[] = [];
+        if (!fetchedItems.items) {
+            console.error("No items found in the response.");
+            console.log(url);
+            return processedResults;
+        }
         for (const item of fetchedItems.items) {
             processedResults.push(googleToGeneral(item));
         }
@@ -109,7 +115,6 @@ export async function searchForBooks(title: string, author: string, maxResults: 
         const query = queryParts.join('&');
     
         const url = `https://openlibrary.org/search.json?${query}&limit=${maxResults}`;
-        console.log(url);
         const res = await fetch(url);
 
         const data = await res.json();
@@ -148,3 +153,56 @@ async function _getOpenLibraryBookData(bookId: any, title: any, authors: any): P
     
 }
 
+export async function getOpenLibraryRecommendation(title: string, author: string, maxResults=1): Promise<OpenLibraryRecommendationInfo> {
+    const queryParts = [];
+    if (title) queryParts.push(`title=${encodeURIComponent(title)}`);
+    if (author) queryParts.push(`author=${encodeURIComponent(author)}`);
+
+    const query = queryParts.join('&');
+
+    const url = `https://openlibrary.org/search.json?${query}&limit=${maxResults}`;
+    console.log(url);
+    const res = await fetch(url);
+
+    const data = await res.json();
+
+    const books = await Promise.all(
+        data.docs.slice(0, maxResults).map(async (doc: any) => {
+            const bookId = doc.key?.replace("/works/", "");
+            const title = doc.title ?? "Unknown Title";
+            const authors = doc.author_name?.join(", ") ?? "Unknown Author";
+            const publishYear = doc.first_publish_year ?? "Unknown Year";
+            const coverUrl = doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null;
+
+            const book_url = `https://openlibrary.org/works/${bookId}.json`;
+            const bookRes = await fetch(book_url);
+            const bookData = await bookRes.json();
+
+            const description = bookData.description ?? "No description available.";
+            const categories = bookData.subjects ?? [];
+            const limitedCategories = categories
+                .filter((category: string) => typeof category === 'string' 
+                    && category.toLowerCase() !== 'fiction' 
+                    && isEnglish(category)
+                )
+                .slice(0, 3);
+                
+            return {
+                title: title,
+                authors: authors,
+                coverUrl: coverUrl,
+                description: description,
+                categories: limitedCategories,
+                publishYear: publishYear
+            } as OpenLibraryRecommendationInfo;
+        }
+    ));
+    return books[0];
+}
+    
+const isEnglish = (category: string): boolean => {
+    // Check if the string contains only English letters and spaces
+    const isValidEnglishChars = /^[A-Za-z\s]+$/.test(category);
+    // Ensure the first letter is capitalized and it's a valid English string
+    return isValidEnglishChars && category[0] === category[0].toUpperCase();
+};

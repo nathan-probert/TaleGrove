@@ -1,30 +1,28 @@
 import { BookRecommendation } from '@/types';
-import { GoogleGenerativeAI, GenerationConfig } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 if (!apiKey) {
     throw new Error("Missing GEMINI_API_KEY environment variable.");
 }
 
 const genAI = new GoogleGenerativeAI(apiKey);
 
-const generationConfig: GenerationConfig = {
-    responseMimeType: "application/json",
-};
-
-export const model = genAI.getGenerativeModel({
-    model: 'gemini-pro',
-    generationConfig,
+const model = genAI.getGenerativeModel({
+  model: "models/gemini-1.5-flash",
 });
 
-
 function _adjustPromptForUseCase(prompt: string): string {
-    return `Based *only* on the provided JSON data, recommend exactly ten books.
-    Return the recommendations as a JSON array of objects, where each object strictly adheres to the following schema: { "title": string, "author": string }.
-    Do not include any introductory text, explanations, or concluding remarks outside the JSON array.
-    Here is the JSON data:
-    ${prompt}`;
+    return `You are a recommendation engine.
+Based *only* on the provided JSON data, recommend exactly ten new books that the user has **not** already read, rated, or added to their wishlist.
+Do **not** include any books already mentioned in the input.
+Return the recommendations strictly as a JSON array of objects in this format: { "title": string, "author": string }.
+Do not include any explanations or text outside the JSON array.
+
+Here is the JSON data:
+${prompt}`;
 }
+
 
 function _isValidBookRecommendationArray(data: unknown): data is BookRecommendation[] {
     return (
@@ -40,20 +38,33 @@ function _isValidBookRecommendationArray(data: unknown): data is BookRecommendat
     );
 }
 
+// 🧼 Clean up markdown-style formatting from AI response
+function _cleanJsonResponse(response: string): string {
+    return response.replace(/```json|```/g, '').trim();
+}
 
-export async function generateContent(prompt: string): Promise<BookRecommendation[]> {
+export async function _generateContent(prompt: string): Promise<BookRecommendation[]> {
     const adjustedPrompt = _adjustPromptForUseCase(prompt);
+    console.log('Adjusted Prompt:', adjustedPrompt);
 
     try {
-        const result = await model.generateContent(adjustedPrompt);
-        const text = result.response.text();
+        const result = await model.generateContent({
+            contents: [
+                {
+                    role: 'user',
+                    parts: [{ text: adjustedPrompt }],
+                },
+            ],
+        });
 
-        // Parse the JSON response (JSON mode should ensure it's valid JSON)
+        const rawText = result.response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const cleanedText = _cleanJsonResponse(rawText);
+
         let parsedResponse: unknown;
         try {
-            parsedResponse = JSON.parse(text);
+            parsedResponse = JSON.parse(cleanedText);
         } catch (error) {
-            console.error('Failed to parse JSON response:', text, error);
+            console.error('Failed to parse JSON response:', rawText, error);
             throw new Error('AI model returned invalid JSON.');
         }
 
@@ -72,4 +83,9 @@ export async function generateContent(prompt: string): Promise<BookRecommendatio
         }
         throw new Error('Failed to generate content from AI model.');
     }
+}
+
+export async function generateRecommendations(userData: BookRecommendation[]): Promise<BookRecommendation[]> {
+    const prompt = JSON.stringify(userData);
+    return await _generateContent(prompt);
 }

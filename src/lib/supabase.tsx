@@ -332,7 +332,8 @@ export async function deleteFolder(folderId: string, userId: string) {
 
 // Functions for ai recommendations
 export async function getUsersBooks(userId: string, yearsToCheck: number = Infinity) {
-  const columnsToReturn = `title, author, date_read, status, rating, notes`; // match UserBookData type
+  // const columnsToReturn = `title, author, date_read, status, rating, notes`; // match UserBookData type
+  const columnsToReturn = `title, author, status, rating, notes`; // match UserBookData type
 
   let query = supabase.from('books').select(columnsToReturn).eq('user_id', userId);
   if (yearsToCheck !== Infinity) {
