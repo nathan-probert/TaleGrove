@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Book, BookStatus, Folder, BookFromAPI } from "@/types";
-import { getUserId, fetchUserFolders, addBook, addBookToFolders } from "@/lib/supabase";
-import { Modal } from "./Modal";
+import { getUserId, getUserFolders, addBook, addBookToFolders } from "@/lib/supabase";
+import { AddBookModal } from "./Modals/AddBookModal";
 
 interface BookNotInCollectionProps {
   book: Book;
@@ -56,7 +56,7 @@ export default function BookNotInCollection({ book, item, onBack, reload }: Book
       }
 
       try {
-        const folderData = await fetchUserFolders(userId);
+        const folderData = await getUserFolders(userId);
         setFolders([...folderData]);
       } catch (error) {
         console.error("Failed to fetch folders:", error);
@@ -146,21 +146,21 @@ export default function BookNotInCollection({ book, item, onBack, reload }: Book
       {/* Back Button */}
       <button
         onClick={onBack}
-        className="mb-6 px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
+        className="mb-6 px-4 py-2 bg-secondary text-foreground rounded hover:bg-gray-500 transition"
       >
         ← Back
       </button>
 
       {/* Book Details */}
-      <h1 className="text-3xl font-bold mb-2">{book.title}</h1>
-      <p className="text-gray-700 mb-4">by {book.author}</p>
+      <h1 className="text-3xl text-foreground font-bold mb-2">{book.title}</h1>
+      <p className="text-foreground mb-4">by {book.author}</p>
       <img
         src={book.cover_url ?? ""}
         alt={book.title}
         className="mb-4 shadow-lg float-left mr-4 w-32 md:w-48" // Adjusted size
       />
       <div
-        className="text-gray-800 mb-4 prose prose-sm sm:prose" // Using prose for better text formatting
+        className="text-foreground mb-4 prose prose-sm sm:prose" // Using prose for better text formatting
         dangerouslySetInnerHTML={{ __html: item.description }}
       />
 
@@ -178,57 +178,24 @@ export default function BookNotInCollection({ book, item, onBack, reload }: Book
 
       {/* Modal for Folder Selection */}
       {isModalOpen && (
-        <Modal
+        <AddBookModal
+          book={book}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          title={`Add "${book.title}"`}
-          confirmButtonText={
-            selectedFolderIds.length > 0
-              ? `Add Now (${selectedFolderIds.length} folder${selectedFolderIds.length > 1 ? "s" : ""})`
-              : "Add Now"
-          }
           onConfirm={handleAddNow}
-          isLoading={isAdding}
-          loadingText="Adding..."
-          disabled={isAdding}
-        >
-          {/* Status selection */}
-          <div className="mb-4">
-            <p className="text-sm font-medium text-gray-700 mb-2">Select Status:</p>
-            <div className="flex space-x-4">
-              {statusOptions.map((option) => (
-                <div key={option.value} className="flex items-center">
-                  <input
-                    type="radio"
-                    value={option.value}
-                    checked={selectedStatus === option.value}
-                    onChange={handleStatusChange}
-                    className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                  />
-                  <label className="ml-2 block text-sm text-gray-900">
-                    {option.label}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Folder selection */}
-          <div className="max-h-48 overflow-y-auto mb-6 border rounded p-3 bg-gray-50">
-            {folders.map((folder) => (
-              <div key={folder.id} className="flex items-center mb-2 last:mb-0">
-                <input
-                  type="checkbox"
-                  checked={selectedFolderIds.includes(folder.id)}
-                  onChange={(e) => handleFolderSelectionChange(folder.id, e.target.checked)}
-                  className="mr-3 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label className="text-gray-800">{folder.name}</label>
-              </div>
-            ))}
-          </div>
-        </Modal>      
+          folders={folders}
+          selectedFolderIds={selectedFolderIds}
+          selectedStatus={selectedStatus}
+          rating={rating ?? undefined}
+          setRating={setRating}
+          notes={notes}
+          setNotes={setNotes}
+          handleFolderSelectionChange={handleFolderSelectionChange}
+          handleStatusChange={handleStatusChange}
+          statusOptions={statusOptions}
+          isAdding={isAdding}
+        />
       )}
-    </div>
+    </div >
   );
 }

@@ -21,6 +21,18 @@ export async function signInWithEmail(email: string, password: string) {
   return supabase.auth.signInWithPassword({ email, password });
 }
 
+export async function signInWithGoogle() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/books`,
+    },
+  });
+
+  if (error) { throw error; }
+  return data;
+}
+
 export async function signOut() {
   return supabase.auth.signOut();
 }
@@ -305,10 +317,6 @@ export async function deleteFolder(folderId: string, userId: string) {
 }
 
 export async function addFolderToFolder(folderId: string, newParentId: string | null, userId: string) {
-  console.log("folder ID:", folderId);
-  console.log("New parent ID:", newParentId);
-  console.log("User ID:", userId);
-  
   const { data, error } = await supabase
     .from('folders')
     .update({ parent_id: newParentId })
@@ -363,7 +371,7 @@ export async function saveRecommendation(
 export async function getRecommendations(userId: string) {
   const { data, error } = await supabase
     .from('book_recommendations')
-    .select('*')
+    .select('title, author')
     .eq('user_id', userId);
 
   if (error) throw error;
@@ -401,13 +409,13 @@ export async function reorderBookInFolder(draggedBookId: string, targetBookId: s
 
   const { error: updateError } = await supabase
     .from('folder_books')
-    .upsert(updates, { 
+    .upsert(updates, {
       onConflict: 'id',
       ignoreDuplicates: false
-  });
+    });
 
   if (updateError) {
-      console.error('Failed to update order:', updateError);
+    console.error('Failed to update order:', updateError);
   }
   return updates;
 }

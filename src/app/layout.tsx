@@ -1,6 +1,6 @@
 import '../styles/globals.css';
 import { ReactNode } from 'react';
-import Header from '@/components/Header';
+import LayoutShell from '@/components/LayoutShell';
 
 export const metadata = {
   title: 'TaleGrove',
@@ -30,10 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased transition-colors duration-200">
-        <Header />
-        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {children}
-        </main>
+        <LayoutShell>{children}</LayoutShell>
       </body>
     </html>
   );

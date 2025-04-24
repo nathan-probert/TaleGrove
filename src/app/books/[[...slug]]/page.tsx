@@ -42,7 +42,7 @@ export default function Books() {
             // Handle root folder case
             if (parentId === null) {
                 parentId = await getRootId(userId);
-            } 
+            }
 
             query = query.eq('parent_id', parentId);
             if (!parentFolderId) {
@@ -217,7 +217,7 @@ export default function Books() {
     }
 
     return (
-        <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+        <div className="min-h-screen bg-background p-2">
             <div className="max-w-7xl mx-auto space-y-6">
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -225,7 +225,7 @@ export default function Books() {
                         <h1 className="text-3xl font-bold text-foreground">
                             📚 Dashboard
                         </h1>
-                        
+
                         {/* Breadcrumbs */}
                         {breadcrumbs.length > 1 && (
                             <nav className="flex" aria-label="Breadcrumb">
@@ -233,9 +233,9 @@ export default function Books() {
                                     {breadcrumbs.map((crumb, index) => (
                                         <li key={crumb.id || 'home'} className="flex items-center">
                                             {index > 0 && (
-                                                <svg 
-                                                    className="h-4 w-4 text-grey2 flex-shrink-0" 
-                                                    fill="currentColor" 
+                                                <svg
+                                                    className="h-4 w-4 text-grey2 flex-shrink-0"
+                                                    fill="currentColor"
                                                     viewBox="0 0 20 20"
                                                 >
                                                     <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -243,11 +243,10 @@ export default function Books() {
                                             )}
                                             <button
                                                 onClick={() => handleBreadcrumbClick(crumb)}
-                                                className={`text-sm font-medium ${
-                                                    index === breadcrumbs.length - 1
-                                                        ? 'text-foreground cursor-default'
-                                                        : 'text-grey2 hover:text-primary transition-colors'
-                                                }`}
+                                                className={`text-sm font-medium ${index === breadcrumbs.length - 1
+                                                    ? 'text-foreground cursor-default'
+                                                    : 'text-grey2 hover:text-primary transition-colors'
+                                                    }`}
                                                 disabled={index === breadcrumbs.length - 1}
                                             >
                                                 {crumb.name}
@@ -258,7 +257,7 @@ export default function Books() {
                             </nav>
                         )}
                     </div>
-    
+
                     {/* Delete Button */}
                     {!isRoot && currentFolderId && (
                         <button
@@ -281,7 +280,7 @@ export default function Books() {
                         </button>
                     )}
                 </div>
-    
+
                 {/* Action Buttons */}
                 <div className="flex flex-wrap gap-3">
                     <button
@@ -297,14 +296,14 @@ export default function Books() {
                             'Create Folder'
                         )}
                     </button>
-                    
+
                     <Link
                         href="/search"
                         className="inline-flex items-center px-6 py-3 rounded-md shadow-sm text-base font-medium text-foreground bg-secondary hover:scale-105 transition-transform duration-200 ease-in-out transform-gpu">
                         Search for Books
                     </Link>
                 </div>
-    
+
                 {/* Content Area */}
                 {isLoading ? (
                     <div className="flex justify-center py-12">

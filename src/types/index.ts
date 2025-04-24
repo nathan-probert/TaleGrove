@@ -11,6 +11,7 @@ export interface Book {
   isbn: string;
   book_id: string;
   cover_url: string;
+  categories: string[];
   dateRead?: string | null;
   sort_order?: number | null;
 }
@@ -39,6 +40,7 @@ export type BookFromAPI = {
   title: string;
   authors: string;
   description: string;
+  categories: string[];
   isbn: string;
 };
 

@@ -23,6 +23,7 @@ const parseBookData = (data: BookFromAPI[], userId: string): Book[] => {
       user_id: userId,
       status: BookStatus.wishlist,
       book_id: item.id,
+      categories: [],
       isbn: item.isbn,
       cover_url: getCoverUrl(item.id),
     });
@@ -126,7 +127,7 @@ export default function SearchBook() {
             </button>
           </form>
 
-          <div className="border-t border- my-6" />
+          <div className="my-6" />
         </div>
 
         {/* Results Section */}

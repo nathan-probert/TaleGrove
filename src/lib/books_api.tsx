@@ -3,11 +3,24 @@
 // UPDATE: USING GOOGLE BOOKS API FOR NOW, OPENLIBRARY IS MORE CUBERSOME AS I HAVE TO MAKE MULTIPLE CALLS TO GET THE DATA I NEED
 
 import { BookFromAPI, OpenLibraryRecommendationInfo } from "@/types";
-import { ol } from "framer-motion/client";
 
 
 const useGoogle = true;
 const googleApiKey = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY;
+
+
+function _parseCategories(categories: string[]): string[] {
+    const tags = new Set<string>();
+
+    for (const category of categories) {
+        const parts = category.split('/').map(p => p.trim());
+        parts.forEach(part => tags.add(part));
+    }
+
+    const cleanedTags = Array.from(tags)
+    console.log("Parsed categories:", cleanedTags);
+    return cleanedTags;
+}
 
 
 function googleToGeneral(fetchedItem: any): BookFromAPI {
@@ -15,16 +28,19 @@ function googleToGeneral(fetchedItem: any): BookFromAPI {
 
     let foundIsbn: string | null = null;
     if (volumeInfo.industryIdentifiers) {
-      const isbn13 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13');
-      const isbn10 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10');
-      foundIsbn = isbn13?.identifier ?? isbn10?.identifier ?? null;
+        const isbn13 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13');
+        const isbn10 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10');
+        foundIsbn = isbn13?.identifier ?? isbn10?.identifier ?? null;
     }
+
+    const categories = volumeInfo.categories ? _parseCategories(volumeInfo.categories) : [];
 
     return {
         id: fetchedItem.id,
         title: volumeInfo.title || "No Title",
         authors: volumeInfo.authors ? volumeInfo.authors.join(', ') : 'Unknown Author',
         description: volumeInfo["description"] || "No Description",
+        categories: categories ?? [],
         isbn: foundIsbn ?? "",
     } as BookFromAPI;
 }
@@ -32,38 +48,39 @@ function googleToGeneral(fetchedItem: any): BookFromAPI {
 async function openLibraryToGeneral(fetchedItem: any): Promise<BookFromAPI> {
     const title = fetchedItem.title ?? "Unknown Title";
     const description = fetchedItem.description ?? "No description available.";
-  
+
     // Get author names
     const authorKeys = (fetchedItem.authors ?? []).map((a: any) => a.author.key);
     const authors = await Promise.all(
-      authorKeys.map(async (key: string) => {
-        const res = await fetch(`https://openlibrary.org${key}.json`);
-        const data = await res.json();
-        return data.name;
-      })
+        authorKeys.map(async (key: string) => {
+            const res = await fetch(`https://openlibrary.org${key}.json`);
+            const data = await res.json();
+            return data.name;
+        })
     );
-  
+
     // Get ISBNs from first edition
     const editionRes = await fetch(`https://openlibrary.org/works/${fetchedItem.id}/editions.json?limit=1`);
     const editionData = await editionRes.json();
     const firstEdition = editionData.entries?.[0];
     const isbn =
-      firstEdition?.isbn_13?.[0] ??
-      firstEdition?.isbn_10?.[0] ??
-      "No ISBN available";
-  
+        firstEdition?.isbn_13?.[0] ??
+        firstEdition?.isbn_10?.[0] ??
+        "No ISBN available";
+
     return {
-      id: fetchedItem.id,
-      title,
-      authors: authors.join(", "),
-      description,
-      isbn,
+        id: fetchedItem.id,
+        title,
+        authors: authors.join(", "),
+        description,
+        isbn,
     } as BookFromAPI;
 }
 
 export async function getBookFromAPI(id: string): Promise<BookFromAPI> {
     if (useGoogle) {
         const res = await fetch(`https://www.googleapis.com/books/v1/volumes/${id}?key=${googleApiKey}`);
+        console.log(`https://www.googleapis.com/books/v1/volumes/${id}?key=${googleApiKey}`);
         const fetchedItem = await res.json();
         return googleToGeneral(fetchedItem);
     } else {
@@ -90,8 +107,9 @@ export async function searchForBooks(title: string, author: string, maxResults: 
         const query = `q=${queryParts.join('+')}`;
 
         // Include fields parameter to request only necessary data
-        const fields = 'items(id,volumeInfo(title,authors, description))';
+        const fields = 'items(id,volumeInfo(title,authors, description, categories))';
         const url = `https://www.googleapis.com/books/v1/volumes?${query}&maxResults=${maxResults}&langRestrict=en&fields=${encodeURIComponent(fields)}&key=${googleApiKey}`;
+        console.log(url);
 
         const res = await fetch(url);
         const fetchedItems = await res.json();
@@ -99,7 +117,6 @@ export async function searchForBooks(title: string, author: string, maxResults: 
         let processedResults: BookFromAPI[] = [];
         if (!fetchedItems.items) {
             console.error("No items found in the response.");
-            console.log(url);
             return processedResults;
         }
         for (const item of fetchedItems.items) {
@@ -113,23 +130,23 @@ export async function searchForBooks(title: string, author: string, maxResults: 
         if (author) queryParts.push(`author=${encodeURIComponent(author)}`);
 
         const query = queryParts.join('&');
-    
+
         const url = `https://openlibrary.org/search.json?${query}&limit=${maxResults}`;
         const res = await fetch(url);
 
         const data = await res.json();
-    
+
         const books = await Promise.all(
             data.docs.slice(0, maxResults).map(async (doc: any) => {
                 const bookId = doc.key?.replace("/works/", "");
                 const title = doc.title ?? "Unknown Title";
                 const authors = doc.author_name?.join(", ") ?? "Unknown Author";
-        
+
                 return await _getOpenLibraryBookData(bookId, title, authors);
             })
         );
 
-        return books;        
+        return books;
     }
 }
 
@@ -138,9 +155,9 @@ async function _getOpenLibraryBookData(bookId: any, title: any, authors: any): P
     const editionData = await editionRes.json();
     const firstEdition = editionData.entries?.[0];
     const isbn =
-      firstEdition?.isbn_13?.[0] ??
-      firstEdition?.isbn_10?.[0] ??
-      "No ISBN available";
+        firstEdition?.isbn_13?.[0] ??
+        firstEdition?.isbn_10?.[0] ??
+        "No ISBN available";
 
     // description has to be fetched separately so avoid for search
     return {
@@ -150,10 +167,10 @@ async function _getOpenLibraryBookData(bookId: any, title: any, authors: any): P
         description: "No description available.",
         isbn: isbn,
     } as BookFromAPI;
-    
+
 }
 
-export async function getOpenLibraryRecommendation(title: string, author: string, maxResults=1): Promise<OpenLibraryRecommendationInfo> {
+export async function getOpenLibraryRecommendation(title: string, author: string, maxResults = 1): Promise<OpenLibraryRecommendationInfo> {
     const queryParts = [];
     if (title) queryParts.push(`title=${encodeURIComponent(title)}`);
     if (author) queryParts.push(`author=${encodeURIComponent(author)}`);
@@ -163,8 +180,6 @@ export async function getOpenLibraryRecommendation(title: string, author: string
 
     const ol_url = `https://openlibrary.org/search.json?${ol_query}&limit=${maxResults}`;
     const g_url = `https://www.googleapis.com/books/v1/volumes?${g_query}&maxResults=15&langRestrict=en&key=${googleApiKey}`;
-    console.log(ol_url);
-    console.log(g_url);
 
     let ol_res = await fetch(ol_url);
     let ol_data = await ol_res.json();
@@ -176,14 +191,16 @@ export async function getOpenLibraryRecommendation(title: string, author: string
         const ol_query_no_author = `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=${maxResults}`;
         ol_res = await fetch(ol_query_no_author);
         ol_data = await ol_res.json();
-        throw new Error("No results found in OpenLibrary for the given title and author.");
+        if (ol_data.docs.length === 0) {
+            throw new Error("No results found in OpenLibrary for the given title and author.");
+        }
     }
 
     // get description from openlibrary
     const ol_doc = ol_data.docs[0];
-    const ol_bookId = ol_doc.key?.replace("/works/", "");    
+    const ol_bookId = ol_doc.key?.replace("/works/", "");
     const ol_book_url = `https://openlibrary.org/works/${ol_bookId}.json`;
-    console.log(ol_book_url);
+
     const bookRes = await fetch(ol_book_url);
     const bookData = await bookRes.json();
     let description = null;
@@ -194,7 +211,7 @@ export async function getOpenLibraryRecommendation(title: string, author: string
             description = bookData.description.value;
         }
     }
-    
+
     // get other info from google books
     // Google search is weird, sometimes it won't return the correct book first
     let g_doc: any = null;
@@ -213,9 +230,9 @@ export async function getOpenLibraryRecommendation(title: string, author: string
 
     let foundIsbn: string | null = null;
     if (volumeInfo.industryIdentifiers) {
-      const isbn13 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13');
-      const isbn10 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10');
-      foundIsbn = isbn13?.identifier ?? isbn10?.identifier ?? null;
+        const isbn13 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13');
+        const isbn10 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10');
+        foundIsbn = isbn13?.identifier ?? isbn10?.identifier ?? null;
     }
 
     if (!description) {
@@ -226,13 +243,41 @@ export async function getOpenLibraryRecommendation(title: string, author: string
         }
     }
 
+    console.log("Description before cleaning:", description);
+    if (description) {
+        // Convert Windows-style newlines to UNIX-style
+        description = description.replace(/\r\n/g, '\n');
+
+        // Replace ***bold*** with <strong>
+        description = description.replace(/\*\*\*(.*?)\*\*\*/g, '<strong>$1</strong>');
+
+        // Optionally: Remove markdown-style links like [text][1] → just keep "text"
+        description = description.replace(/\[(.*?)\]\[\d+\]/g, '$1');
+
+        // Remove markdown-style footnotes entirely
+        description = description.replace(/\n\s*\[\d+\]:\s*https?:\/\/\S+/g, '');
+
+        // Convert paragraph breaks into <p> blocks
+        description = description
+            .split(/\n{2,}/)
+            .map((p: string) => `<p class="para-spacing">${p.trim()}</p>`)
+            .join('\n');
+    }
+
+
+    console.log("Description after cleaning:", description);
+
+    console.log("Categories before parsing:", volumeInfo.categories);
+    const categories = volumeInfo.categories ? _parseCategories(volumeInfo.categories) : [];
+    console.log("Parsed categories:", categories);
+
     return {
         id: g_doc.id,
         title: volumeInfo.title || "No Title",
         authors: volumeInfo.authors ? volumeInfo.authors.join(', ') : 'Unknown Author',
         coverUrl: getCoverUrl(g_doc.id),
         description: description,
-        categories: volumeInfo.categories ? volumeInfo.categories.join(', ') : 'Unknown Categories',
+        categories: categories ?? [],
         publishYear: volumeInfo.publishedDate || 'Unknown Publish Year',
         isbn: foundIsbn ?? "",
     } as OpenLibraryRecommendationInfo;

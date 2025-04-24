@@ -43,6 +43,7 @@ export default function BookDetailPage() {
             user_id: userId,
             status: BookStatus.wishlist,
             book_id: fetchedItem.id,
+            categories: fetchedItem.categories,
             isbn: fetchedItem.isbn,
             cover_url: coverUrl,
           } as Book;

@@ -27,7 +27,7 @@ export default function Header() {
   if (!mounted) return null;
 
   return (
-    <header className="bg-background border-b border-gray-200 dark:border-gray-800">
+    <header className="bg-background">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row items-center justify-between py-4">
           <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
@@ -36,7 +36,7 @@ export default function Header() {
               TaleGrove
             </h1>
           </Link>
-          
+
           <div className="flex items-center space-x-4 mt-4 sm:mt-0">
             <nav className="flex items-center space-x-4">
               <NavLink href="/books" icon={<Book size={20} />} active={pathname === '/books'}>
@@ -49,7 +49,7 @@ export default function Header() {
                 Discover
               </NavLink>
             </nav>
-            
+
             <button
               onClick={toggleTheme}
               className="p-2 rounded-lg hover:bg-muted transition-colors"
@@ -69,8 +69,8 @@ export default function Header() {
 }
 
 
-function NavLink({ href, icon, children, active }: { 
-  href: string, 
+function NavLink({ href, icon, children, active }: {
+  href: string,
   icon: React.ReactNode,
   children: React.ReactNode,
   active?: boolean
@@ -78,11 +78,10 @@ function NavLink({ href, icon, children, active }: {
   return (
     <Link
       href={href}
-      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-        active 
+      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${active
           ? 'bg-primary/10 text-primary'
           : 'hover:bg-muted text-foreground/80 hover:text-foreground'
-      }`}
+        }`}
     >
       {icon}
       <span className="hidden sm:inline-block">{children}</span>
