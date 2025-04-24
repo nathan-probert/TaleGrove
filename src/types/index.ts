@@ -12,6 +12,7 @@ export interface Book {
   book_id: string;
   cover_url: string;
   dateRead?: string | null;
+  sort_order?: number | null;
 }
 export enum BookStatus {
   reading = 'reading',
@@ -26,6 +27,7 @@ export interface Folder {
   user_id: string;
   parent_id: string | null;
   slug: string;
+  sort_order?: number | null;
 }
 
 export type BookOrFolder =
@@ -40,14 +42,6 @@ export type BookFromAPI = {
   isbn: string;
 };
 
-// export type UserBookData = {
-//   title: string;
-//   author: string;
-//   status: BookStatus;
-//   rating?: number | null;
-//   notes?: string | null;
-//   dateRead?: string | null;
-// }
 export type UserBookData = {
   title: string;
   author: string;
@@ -62,10 +56,12 @@ export type BookRecommendation = {
 }
 
 export type OpenLibraryRecommendationInfo = {
+  id: string;
   title: string;
   authors: string;
   coverUrl: string;
   description: string;
   categories: string[];
   publishYear: string;
+  isbn: string;
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Book, BookStatus, Folder, BookFromAPI } from "@/types";
 import { getUserId, fetchUserFolders, addBook, addBookToFolders } from "@/lib/supabase";
-import { Router } from "lucide-react";
+import { Modal } from "./Modal";
 
 interface BookNotInCollectionProps {
   book: Book;
@@ -178,151 +178,56 @@ export default function BookNotInCollection({ book, item, onBack, reload }: Book
 
       {/* Modal for Folder Selection */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
-          {/* Modal Dialog */}
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-            <h2 className="text-xl font-semibold mb-4">Add "{book.title}"</h2>
-
-            {/* Status Selection */}
-            <div className="mb-4"> {/* Reduced bottom margin */}
-              <p className="text-sm font-medium text-gray-700 mb-2">Select Status:</p>
-              <div className="flex space-x-4">
-                {statusOptions.map((option) => (
-                  <div key={option.value} className="flex items-center">
-                    <input
-                      id={`status-${option.value}`}
-                      name="book-status"
-                      type="radio"
-                      value={option.value}
-                      checked={selectedStatus === option.value}
-                      onChange={handleStatusChange}
-                      className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
-                      disabled={isAdding}
-                    />
-                    <label
-                      htmlFor={`status-${option.value}`}
-                      className={`ml-2 block text-sm text-gray-900 ${isAdding ? 'opacity-50' : 'cursor-pointer'}`}
-                    >
-                      {option.label}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Conditional Rating and Notes for 'Completed' Status */}
-            {selectedStatus === 'completed' && (
-              <div className="mb-6 mt-4 space-y-4 border-t pt-4"> {/* Added top border and padding */}
-                {/* Rating Input */}
-                <div>
-                  <label htmlFor="rating" className="block text-sm font-medium text-gray-700">Rating (Optional, 1-10):</label>
+        <Modal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          title={`Add "${book.title}"`}
+          confirmButtonText={
+            selectedFolderIds.length > 0
+              ? `Add Now (${selectedFolderIds.length} folder${selectedFolderIds.length > 1 ? "s" : ""})`
+              : "Add Now"
+          }
+          onConfirm={handleAddNow}
+          isLoading={isAdding}
+          loadingText="Adding..."
+          disabled={isAdding}
+        >
+          {/* Status selection */}
+          <div className="mb-4">
+            <p className="text-sm font-medium text-gray-700 mb-2">Select Status:</p>
+            <div className="flex space-x-4">
+              {statusOptions.map((option) => (
+                <div key={option.value} className="flex items-center">
                   <input
-                    type="number"
-                    id="rating"
-                    name="rating"
-                    min="1"
-                    max="10"
-                    value={rating ?? ''} // Use empty string if rating is null for the input value
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      // Allow empty input (clearing the field) or numbers between 1 and 10
-                      if (val === '') {
-                        setRating(null);
-                      } else {
-                        const num = parseInt(val, 10);
-                        if (!isNaN(num) && num >= 1 && num <= 10) {
-                          setRating(num);
-                        } else if (!isNaN(num) && (num < 1 || num > 10)) {
-                          // Optionally provide immediate feedback or just prevent setting state
-                          // For simplicity, we just don't update state if out of range
-                          // The validation in handleAddNow will catch it if user tries to submit invalid number
-                        }
-                      }
-                    }}
-                    placeholder="e.g., 8"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm disabled:opacity-50 disabled:bg-gray-100"
-                    disabled={isAdding}
+                    type="radio"
+                    value={option.value}
+                    checked={selectedStatus === option.value}
+                    onChange={handleStatusChange}
+                    className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                   />
+                  <label className="ml-2 block text-sm text-gray-900">
+                    {option.label}
+                  </label>
                 </div>
-                {/* Notes Textarea */}
-                <div>
-                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes (Optional):</label>
-                  <textarea
-                    id="notes"
-                    name="notes"
-                    rows={3}
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Any thoughts on the book?"
-                    className="p-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm disabled:opacity-50 disabled:bg-gray-100"
-                    disabled={isAdding}
-                  />
-                </div>
-              </div>
-            )}
-
-
-            {/* Folder Selection Title */}
-            <p className="text-sm font-medium text-gray-700 mb-2">Select Folders (Optional):</p>
-
-            {/* Folder List */}
-            <div className="max-h-48 overflow-y-auto mb-6 border rounded p-3 bg-gray-50">
-              {isLoadingFolders ? (
-                <p className="text-gray-500">Loading folders...</p>
-              ) : folders.length === 0 ? (
-                <p className="text-gray-500">No folders available.</p>
-              ) : (
-                folders.map((folder) => (
-                  <div key={folder.id} className="flex items-center mb-2 last:mb-0">
-                    <input
-                      type="checkbox"
-                      id={`folder-${folder.id}`}
-                      value={folder.id}
-                      checked={selectedFolderIds.includes(folder.id)}
-                      onChange={(e) => handleFolderSelectionChange(folder.id, e.target.checked)}
-                      className="mr-3 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-                      disabled={isAdding}
-                    />
-                    <label
-                      htmlFor={`folder-${folder.id}`}
-                      className={`text-gray-800 ${isAdding ? 'opacity-50' : 'cursor-pointer'}`}
-                    >
-                      {folder.name}
-                    </label>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Modal Actions */}
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition disabled:opacity-50"
-                disabled={isAdding}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddNow}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                disabled={isAdding} // Allow adding even if no folder is selected, as status is now primary
-              >
-                {isAdding ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Adding...
-                  </>
-                ) : (
-                  `Add Now ${selectedFolderIds.length > 0 ? `(${selectedFolderIds.length} folder${selectedFolderIds.length > 1 ? 's' : ''})` : ''}`
-                )}
-              </button>
+              ))}
             </div>
           </div>
-        </div>
+
+          {/* Folder selection */}
+          <div className="max-h-48 overflow-y-auto mb-6 border rounded p-3 bg-gray-50">
+            {folders.map((folder) => (
+              <div key={folder.id} className="flex items-center mb-2 last:mb-0">
+                <input
+                  type="checkbox"
+                  checked={selectedFolderIds.includes(folder.id)}
+                  onChange={(e) => handleFolderSelectionChange(folder.id, e.target.checked)}
+                  className="mr-3 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label className="text-gray-800">{folder.name}</label>
+              </div>
+            ))}
+          </div>
+        </Modal>      
       )}
     </div>
   );

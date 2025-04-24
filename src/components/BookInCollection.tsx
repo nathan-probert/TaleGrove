@@ -3,6 +3,7 @@ import { getUserId, deleteBook, removeBookFromFolders, getFoldersFromBook, updat
 import { useEffect, useState } from "react";
 import { Loader2, ArrowLeft, FolderIcon, Trash2, ImageIcon, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Modal } from "./Modal";
 
 interface BookInCollectionProps {
   book: Book;
@@ -224,137 +225,111 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
 
         {/* Edit Details Modal */}
         {isEditModalOpen && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-background rounded-xl p-6 shadow-xl border border-grey4 max-w-md w-full">
-              <h2 className="text-xl font-bold text-foreground mb-4">Edit Details</h2>
-
-              <div className="mb-4">
-                <p className="text-sm font-medium text-foreground mb-2">Status:</p>
-                <div className="flex gap-4">
-                  {statusOptions.map((option) => (
-                    <label key={option.value} className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        value={option.value}
-                        checked={editedStatus === option.value}
-                        onChange={handleStatusChange}
-                        className="w-4 h-4 text-primary"
-                      />
-                      <span className="text-foreground">{option.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {editedStatus === 'completed' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Rating (1-10)
-                    </label>
+          <Modal
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            title="Edit Details"
+            confirmButtonText="Save Changes"
+            onConfirm={handleSaveDetails}
+            isLoading={isUpdating}
+            loadingText="Saving..."
+            disabled={isUpdating}
+          >
+            {/* Status radio buttons */}
+            <div className="mb-4">
+              <p className="text-sm font-medium text-foreground mb-2">Status:</p>
+              <div className="flex gap-4">
+                {statusOptions.map((option) => (
+                  <label key={option.value} className="flex items-center gap-2">
                     <input
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={editedRating || ''}
-                      onChange={(e) => setEditedRating(e.target.value ? parseInt(e.target.value) : null)}
-                      className="w-full p-2 border rounded-lg"
+                      type="radio"
+                      value={option.value}
+                      checked={editedStatus === option.value}
+                      onChange={handleStatusChange}
+                      className="w-4 h-4 text-primary"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Notes
-                    </label>
-                    <textarea
-                      value={editedNotes}
-                      onChange={(e) => setEditedNotes(e.target.value)}
-                      className="w-full p-2 border rounded-lg h-32"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="px-4 py-2 text-grey2 hover:text-foreground"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveDetails}
-                  disabled={isUpdating}
-                  className="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg flex gap-2 items-center"
-                >
-                  {isUpdating && <Loader2 className="animate-spin w-4 h-4" />}
-                  {isUpdating ? 'Saving...' : 'Save Changes'}
-                </button>
+                    <span className="text-foreground">{option.label}</span>
+                  </label>
+                ))}
               </div>
             </div>
-          </div>
+
+            {/* Rating and Notes inputs */}
+            {editedStatus === "completed" && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Rating (1-10)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={editedRating || ""}
+                    onChange={(e) => setEditedRating(e.target.value ? parseInt(e.target.value) : null)}
+                    className="w-full p-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    value={editedNotes}
+                    onChange={(e) => setEditedNotes(e.target.value)}
+                    className="w-full p-2 border rounded-lg h-32"
+                  />
+                </div>
+              </div>
+            )}
+          </Modal>
         )}
 
         {/* Removal Modal */}
         {isModalOpen && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">            <div className="bg-background rounded-xl p-6 shadow-xl border border-grey4 max-w-md w-full">
-            <h2 className="text-xl font-bold text-foreground mb-4">
-              Remove "{book.title}"
-            </h2>
-
-            <p className="text-grey2 mb-6">
-              Select folders to remove from (or remove completely):
-            </p>
-
+          <Modal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            title={`Remove "${book.title}"`}
+            confirmButtonText="Confirm Removal"
+            onConfirm={handleRemoveNow}
+            isLoading={isRemoving}
+            loadingText="Removing..."
+            disabled={isRemoving || (folders.length > 0 && selectedFolderIds.length === 0)}
+            variant="destructive"
+            footerContent={
+              <>
+                {folders.length > 0 && selectedFolderIds.length === 0 && (
+                  <p className="text-xs text-red-500 mt-2 text-right">
+                    Select at least one folder to remove from, or cancel.
+                  </p>
+                )}
+                {folders.length === 0 && (
+                  <p className="text-xs text-grey2 mt-2 text-right">
+                    Confirming will remove the book entirely.
+                  </p>
+                )}
+              </>
+            }
+          >
             <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
-              {isLoadingFolders ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                </div>
-              ) : folders.length === 0 ? (
-                <p className="text-grey2 text-center">This book isn't in any folders.</p>
-              ) : (
-                folders.map((folder) => (
-                  <label
-                    key={folder.id}
-                    className="flex items-center p-3 rounded-lg hover:bg-grey5 transition-colors cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedFolderIds.includes(folder.id)}
-                      onChange={(e) => handleFolderSelectionChange(folder.id, e.target.checked)}
-                      className="w-4 h-4 text-primary rounded border-grey4 focus:ring-primary"
-                    />
-                    <FolderIcon className="w-5 h-5 text-yellow-500 mx-3" />
-                    <span className="text-foreground">{folder.name}</span>
-                  </label>
-                ))
-              )}
+              {folders.map((folder) => (
+                <label
+                  key={folder.id}
+                  className="flex items-center p-3 rounded-lg hover:bg-grey5 transition-colors cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedFolderIds.includes(folder.id)}
+                    onChange={(e) => handleFolderSelectionChange(folder.id, e.target.checked)}
+                    className="w-4 h-4 text-primary rounded border-grey4 focus:ring-primary"
+                  />
+                  <FolderIcon className="w-5 h-5 text-yellow-500 mx-3" />
+                  <span className="text-foreground">{folder.name}</span>
+                </label>
+              ))}
             </div>
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-grey2 hover:text-foreground transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleRemoveNow}
-                disabled={isRemoving || (folders.length > 0 && selectedFolderIds.length === 0)}
-                className="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isRemoving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isRemoving ? 'Removing...' : 'Confirm Removal'}
-              </button>
-            </div>
-            {folders.length > 0 && selectedFolderIds.length === 0 && (
-              <p className="text-xs text-red-500 mt-2 text-right">Select at least one folder to remove from, or cancel.</p>
-            )}
-            {folders.length === 0 && (
-              <p className="text-xs text-grey2 mt-2 text-right">Confirming will remove the book entirely.</p>
-            )}
-          </div>
-          </div>
+          </Modal>
         )}
       </div>
     </div>

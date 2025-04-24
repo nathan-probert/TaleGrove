@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getUserId, checkIfBookInCollection, changeBookCover } from '@/lib/supabase';
-import { get } from 'http';
 import { getCoverUrl } from '@/lib/books_api';
+import { Loader2 } from 'lucide-react';
 
 export default function BookCoversPage() {
     const params = useParams();
@@ -14,28 +14,99 @@ export default function BookCoversPage() {
     const [item, setItem] = useState<any>(null); // Track the entire item from Google Books API
     const [covers, setCovers] = useState<string[]>([]); // Track the covers
     const [isInCollection, setIsInCollection] = useState(false);
+    const [publisherQuery, setPublisherQuery] = useState(''); // State for publisher input
+    const [isLoading, setIsLoading] = useState(true);
+
+    const fetchCovers = async (publisher?: string) => {
+        if (!item) return;
+        setIsLoading(true);
+
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY;
+        const volumeInfo = item.volumeInfo;
+        const coverUrls: string[] = [];
+
+        // check google for covers
+        if (volumeInfo.title) {
+            try {
+                let googleQuery = `q=${encodeURIComponent(volumeInfo.title)}`;
+                if (publisher) {
+                    googleQuery += `+inpublisher:${encodeURIComponent(publisher)}`;
+                }
+                const googleRes = await fetch(`https://www.googleapis.com/books/v1/volumes?${googleQuery}&key=${apiKey}&maxResults=10`);
+                if (googleRes.ok) {
+                    const googleData = await googleRes.json();
+                    if (googleData.items && googleData.items.length > 0) {
+                        googleData.items.forEach((item: any) => {
+                            // Ensure cover exists and avoid duplicates
+                            const coverUrl = getCoverUrl(item.id);
+                            if (coverUrl && !coverUrls.includes(coverUrl)) {
+                                coverUrls.push(coverUrl);
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching from Google Books:", error);
+            }
+        }
+
+        // check open library for covers
+        if (volumeInfo.title) {
+            try {
+                let openLibraryQuery = `title=${encodeURIComponent(volumeInfo.title)}`;
+                if (publisher) {
+                    openLibraryQuery += `&publisher=${encodeURIComponent(publisher)}`;
+                }
+                const openLibraryRes = await fetch(`https://openlibrary.org/search.json?${openLibraryQuery}&limit=10`);
+                if (openLibraryRes.ok) {
+                    const openLibraryData = await openLibraryRes.json();
+                    if (openLibraryData.docs && openLibraryData.docs.length > 0) {
+                        openLibraryData.docs.forEach((doc: any) => {
+                            if (doc.cover_i) {
+                                const coverUrl = `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`;
+                                // Avoid duplicates
+                                if (!coverUrls.includes(coverUrl)) {
+                                    coverUrls.push(coverUrl);
+                                }
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching from Open Library:", error);
+            }
+        }
+
+        // Add the original cover from the item if available and not already included
+        const originalCover = getCoverUrl(item.id);
+        if (originalCover && !coverUrls.includes(originalCover)) {
+            coverUrls.unshift(originalCover); // Add to the beginning
+        }
+
+        setCovers(coverUrls);
+        setIsLoading(false);
+    };
 
 
     const changeCover = (coverUrl: string) => {
         if (!isInCollection) {
             alert('Book is not in your collection!');
-        } else {
-            changeBookCover(book.id, book.user_id, coverUrl);
-            alert(`Cover of ${book.title} changed!`);
+        } else if (book) {
+            changeBookCover(book.book_id, book.user_id, coverUrl);
+            router.push(`/book/${book.book_id}`);
         }
     };
 
 
     useEffect(() => {
-        const fetchBook = async () => {
+        const fetchInitialData = async () => {
             const apiKey = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY;
 
             const res = await fetch(`https://www.googleapis.com/books/v1/volumes/${id}?key=${apiKey}`);
             const fetchedItem = await res.json();
-            setItem(fetchedItem);
+            setItem(fetchedItem); // Set item first
 
             const volumeInfo = fetchedItem.volumeInfo;
-
             const userId = await getUserId();
 
             let foundIsbn: string | null = null;
@@ -45,79 +116,69 @@ export default function BookCoversPage() {
                 foundIsbn = isbn13?.identifier ?? isbn10?.identifier ?? null;
             }
 
-            const coverUrls: string[] = [];
-
-            // check google for covers
-            if (volumeInfo.title) {
-                try {
-                    // const googleRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(volumeInfo.title)}inpublisher:${publisherName}&key=${apiKey}&maxResults=5`);
-                    const googleRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(volumeInfo.title)}&key=${apiKey}&maxResults=5`);
-                    if (googleRes.ok) {
-                        const googleData = await googleRes.json();
-                        if (googleData.items && googleData.items.length > 0) {
-                            googleData.items.forEach((item: any) => {
-                                coverUrls.push(getCoverUrl(item.id));
-                            });
-                        }
-                    }
-                } catch (error) {
-                    console.error("Error fetching from Google Books:", error);
-                }
-            }
-
-            // check open library for covers
-            if (volumeInfo.title) {
-                try {
-                    const openLibraryRes = await fetch(`https://openlibrary.org/search.json?title=${encodeURIComponent(volumeInfo.title)}&limit=5`);
-                    if (openLibraryRes.ok) {
-                        const openLibraryData = await openLibraryRes.json();
-                        if (openLibraryData.docs && openLibraryData.docs.length > 0) {
-                            openLibraryData.docs.forEach((doc: any) => {
-                                if (doc.cover_i) {
-                                    coverUrls.push(`https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`);
-                                }
-                            });
-                        }
-                    }
-                } catch (error) {
-                    console.error("Error fetching from Open Library:", error);
-                }
-            }
-
-            setCovers(coverUrls);
-
+            // Set initial book state
             setBook({
-                id: fetchedItem.id,
+                id: fetchedItem.id, // Use Google's ID initially, might be overwritten if in collection
                 title: volumeInfo.title || 'No Title',
                 author: volumeInfo.authors ? volumeInfo.authors.join(', ') : 'Unknown Author',
                 rating: null,
                 notes: null,
                 user_id: userId ?? undefined,
-                status: "reading",
-                book_id: fetchedItem.id,
+                status: "reading", // Default or fetch from collection
+                book_id: fetchedItem.id, // Google Books Volume ID
                 isbn: foundIsbn,
-                cover_url: coverUrls[0] || null,
+                cover_url: getCoverUrl(fetchedItem.id) || null, // Initial cover
             });
 
             if (userId) {
-                const inCollection = await checkIfBookInCollection(fetchedItem.id, userId);
-                setIsInCollection(inCollection);
+                const collectionData = await checkIfBookInCollection(fetchedItem.id, userId);
+                setIsInCollection(!!collectionData);
+                if (collectionData) {
+                    // If book is in collection, update book state with collection data
+                    setBook((prevBook: any) => ({
+                        ...prevBook,
+                        id: collectionData.id, // Use Supabase row ID
+                        rating: collectionData.rating,
+                        notes: collectionData.notes,
+                        status: collectionData.status,
+                        cover_url: collectionData.cover_url || prevBook.cover_url, // Prefer collection cover
+                        user_id: collectionData.user_id,
+                    }));
+                }
             } else {
                 setIsInCollection(false);
             }
         };
 
-        if (id) fetchBook();
+        if (id) fetchInitialData();
     }, [id]);
+
+    // Fetch covers once the item is loaded
+    useEffect(() => {
+        if (item) {
+            fetchCovers(); // Initial fetch without publisher filter
+        }
+    }, [item]); // Dependency on item ensures it runs after item is set
+
+
+    const handleSearch = () => {
+        fetchCovers(publisherQuery);
+    };
 
     const handleBack = () => {
         router.back();
     };
 
-    if (!book || !item) return <p className="p-4">Loading...</p>; // Ensure both book and item are loaded
-
+    if (isLoading) {
+        return (                
+            <div className="p-4 flex justify-center items-center min-h-[300px]">
+                <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+            </div>
+        );
+    }
+    
     return (
-        <div>
+        <div className="p-4">
             <button
                 onClick={handleBack}
                 className="mb-6 px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
@@ -125,33 +186,61 @@ export default function BookCoversPage() {
                 ← Back
             </button>
 
+            <h1 className="text-2xl font-bold mb-2">{book.title}</h1>
+            <h2 className="text-lg text-gray-600 mb-6">{book.author}</h2>
+
+            {/* Publisher Search */}
+            <div className="mb-6 flex items-center gap-2">
+                <input
+                    type="text"
+                    value={publisherQuery}
+                    onChange={(e) => setPublisherQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            handleSearch();
+                        }
+                    }}
+                    placeholder="Enter publisher name (optional)"
+                    className="px-3 py-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 flex-grow"
+                />
+                <button
+                    onClick={handleSearch}
+                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+                >
+                    Search Covers
+                </button>
+            </div>
+
 
             {covers.length > 0 ? (
-                <div className="grid grid-cols-5 gap-6 p-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                     {covers.map((coverUrl, index) => (
                         <div
-                            key={index}
-                            className="flex flex-col items-center rounded p-2 shadow hover:shadow-lg transition cursor-pointer"
+                            key={`${coverUrl}-${index}`} // Use URL + index for key stability if URLs aren't unique
+                            className={`flex flex-col items-center rounded p-2 shadow hover:shadow-lg transition cursor-pointer border-2 ${book.cover_url === coverUrl ? 'border-blue-500' : 'border-transparent'}`}
                             onClick={() => changeCover(coverUrl)}
+                            title="Click to set as cover"
                         >
                             <img
                                 src={coverUrl}
                                 alt={`Cover ${index + 1} for ${book.title}`}
                                 className="w-full h-auto object-contain mb-2"
-                                style={{ maxHeight: '400px' }}
+                                style={{ maxHeight: '350px' }} // Adjusted max height
                                 loading="lazy"
                                 onError={(e) => {
+                                    // Hide the container if the image fails to load
                                     const parentDiv = (e.target as HTMLImageElement).closest('div');
                                     if (parentDiv) parentDiv.style.display = 'none';
                                 }}
                             />
-                            {/* Optional: Display the URL */}
-                            {/* <p className="text-xs mt-1 break-all text-gray-500">{coverUrl}</p> */}
+                             {book.cover_url === coverUrl && (
+                                <span className="text-xs text-blue-600 font-semibold mt-1">Current Cover</span>
+                            )}
                         </div>
                     ))}
                 </div>
             ) : (
-                <p className="px-4 text-gray-500">No alternative covers found.</p>
+                <p className="text-gray-500">No alternative covers found for this search.</p>
             )}
         </div>
     );

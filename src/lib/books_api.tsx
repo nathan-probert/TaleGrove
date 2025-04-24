@@ -3,7 +3,6 @@
 // UPDATE: USING GOOGLE BOOKS API FOR NOW, OPENLIBRARY IS MORE CUBERSOME AS I HAVE TO MAKE MULTIPLE CALLS TO GET THE DATA I NEED
 
 import { BookFromAPI, OpenLibraryRecommendationInfo } from "@/types";
-import { desc } from "framer-motion/client";
 
 
 const useGoogle = true;
@@ -158,51 +157,73 @@ export async function getOpenLibraryRecommendation(title: string, author: string
     if (title) queryParts.push(`title=${encodeURIComponent(title)}`);
     if (author) queryParts.push(`author=${encodeURIComponent(author)}`);
 
-    const query = queryParts.join('&');
+    const ol_query = queryParts.join('&');
+    const g_query = `q=${queryParts.join('+')}`;
 
-    const url = `https://openlibrary.org/search.json?${query}&limit=${maxResults}`;
-    console.log(url);
-    const res = await fetch(url);
+    const ol_url = `https://openlibrary.org/search.json?${ol_query}&limit=${maxResults}`;
+    const g_url = `https://www.googleapis.com/books/v1/volumes?${g_query}&maxResults=15&langRestrict=en&key=${googleApiKey}`;
+    console.log(g_url);
 
-    const data = await res.json();
+    const ol_res = await fetch(ol_url);
+    const ol_data = await ol_res.json();
+    const g_res = await fetch(g_url);
+    const g_data = await g_res.json();
 
-    const books = await Promise.all(
-        data.docs.slice(0, maxResults).map(async (doc: any) => {
-            const bookId = doc.key?.replace("/works/", "");
-            const title = doc.title ?? "Unknown Title";
-            const authors = doc.author_name?.join(", ") ?? "Unknown Author";
-            const publishYear = doc.first_publish_year ?? "Unknown Year";
-            const coverUrl = doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null;
-
-            const book_url = `https://openlibrary.org/works/${bookId}.json`;
-            const bookRes = await fetch(book_url);
-            const bookData = await bookRes.json();
-
-            const description = bookData.description ?? "No description available.";
-            const categories = bookData.subjects ?? [];
-            const limitedCategories = categories
-                .filter((category: string) => typeof category === 'string' 
-                    && category.toLowerCase() !== 'fiction' 
-                    && isEnglish(category)
-                )
-                .slice(0, 3);
-                
-            return {
-                title: title,
-                authors: authors,
-                coverUrl: coverUrl,
-                description: description,
-                categories: limitedCategories,
-                publishYear: publishYear
-            } as OpenLibraryRecommendationInfo;
+    // get description from openlibrary
+    const ol_doc = ol_data.docs[0];
+    const ol_bookId = ol_doc.key?.replace("/works/", "");    
+    const ol_book_url = `https://openlibrary.org/works/${ol_bookId}.json`;
+    console.log(ol_book_url);
+    const bookRes = await fetch(ol_book_url);
+    const bookData = await bookRes.json();
+    let description = "No description available.";
+    if (bookData.description) {
+        if (typeof bookData.description === 'string') {
+            description = bookData.description;
+        } else if (typeof bookData.description.value === 'string') {
+            description = bookData.description.value;
         }
-    ));
-    return books[0];
-}
+    }
     
-const isEnglish = (category: string): boolean => {
-    // Check if the string contains only English letters and spaces
-    const isValidEnglishChars = /^[A-Za-z\s]+$/.test(category);
-    // Ensure the first letter is capitalized and it's a valid English string
-    return isValidEnglishChars && category[0] === category[0].toUpperCase();
-};
+    // get other info from google books
+    // Google search is weird, sometimes it won't return the correct book first
+    let g_doc: any = null;
+    for (const item of g_data.items) {
+        if (item.volumeInfo.title === title) {
+            g_doc = item;
+            break;
+        }
+    }
+
+    if (!g_doc) {
+        g_doc = g_data.items[0];
+    }
+
+    const volumeInfo = g_doc["volumeInfo"] || {};
+
+    let foundIsbn: string | null = null;
+    if (volumeInfo.industryIdentifiers) {
+      const isbn13 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13');
+      const isbn10 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10');
+      foundIsbn = isbn13?.identifier ?? isbn10?.identifier ?? null;
+    }
+
+    if (!description) {
+        if (volumeInfo.description) {
+            description = volumeInfo.description;
+        } else {
+            description = "No description available.";
+        }
+    }
+
+    return {
+        id: g_doc.id,
+        title: volumeInfo.title || "No Title",
+        authors: volumeInfo.authors ? volumeInfo.authors.join(', ') : 'Unknown Author',
+        coverUrl: getCoverUrl(g_doc.id),
+        description: description,
+        categories: volumeInfo.categories ? volumeInfo.categories.join(', ') : 'Unknown Categories',
+        publishYear: volumeInfo.publishedDate || 'Unknown Publish Year',
+        isbn: foundIsbn ?? "",
+    } as OpenLibraryRecommendationInfo;
+}

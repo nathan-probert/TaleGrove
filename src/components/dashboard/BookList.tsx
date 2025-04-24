@@ -1,9 +1,8 @@
 'use client';
 
 import { BookOrFolder, Folder } from '@/types';
-import FolderCard from '@/components/FolderCard'; // Assuming the filename is lowercase
+import FolderCard from '@/components/dashboard/FolderCard';
 import BookCard from './BookCard';
-import { getRootId } from '@/lib/supabase';
 
 
 interface Props {
@@ -20,14 +19,14 @@ interface Props {
 export default function BookList({ items, onFolderClick, folderId, parentFolderId, parentFolderSlug, refresh, breadcrumbs = [], isRoot }: Props) {
   const parentCrumb = breadcrumbs[breadcrumbs.length - 2];
 
-  // Explicitly type goUpFolder as Folder
   const goUpFolder: Folder & { isFolder: true } = {
     id: parentFolderId ?? 'null',
     name: '⬅️ Go Up',
     slug: parentFolderSlug ?? 'null',
     user_id: '',
     parent_id: null,
-    isFolder: true, // Ensure this is explicitly true
+    isFolder: true,
+    sort_order: -1,
   };
 
   const fullList: BookOrFolder[] = isRoot ? items : [goUpFolder, ...items];

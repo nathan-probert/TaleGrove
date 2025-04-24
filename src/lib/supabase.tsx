@@ -1,5 +1,5 @@
 import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs';
-import { Book, Folder, BookStatus, UserBookData } from '@/types';
+import { Book, Folder, BookStatus, UserBookData, BookRecommendation } from '@/types';
 import { UserResponse } from '@supabase/supabase-js';
 
 const supabase = createPagesBrowserClient({
@@ -257,7 +257,8 @@ export async function getBooksInFolder(folderId: string, userId: string) {
     .from('folder_books')
     .select('books(*)')
     .eq('folder_id', folderId)
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .order('sort_order', { ascending: true });
 
   if (error) throw error;
 
@@ -345,4 +346,76 @@ export async function getUsersBooks(userId: string, yearsToCheck: number = Infin
 
   if (error) throw error;
   return data as UserBookData[];
+}
+
+export async function saveRecommendation(
+  userId: string,
+  recommendation: BookRecommendation
+) {
+  const insertData = {
+    title: recommendation.title,
+    author: recommendation.author,
+    user_id: userId,
+  };
+
+  const { data, error } = await supabase
+    .from('book_recommendations')
+    .upsert(insertData)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return true;
+}
+
+export async function getRecommendations(userId: string) {
+  const { data, error } = await supabase
+    .from('book_recommendations')
+    .select('*')
+    .eq('user_id', userId);
+
+  if (error) throw error;
+  return data as BookRecommendation[];
+}
+
+export async function reorderBookInFolder(draggedBookId: string, targetBookId: string, folderId: string | null, userId: string) {
+  // Fetch all books in the folder
+  const { data: folderBooks, error } = await supabase
+    .from('folder_books')
+    .select('id, book_id, sort_order, folder_id')
+    .eq('folder_id', folderId)
+    .eq('user_id', userId)
+    .order('sort_order', { ascending: true });
+
+  if (error || !folderBooks) return;
+
+  const draggedIndex = folderBooks.findIndex((b) => b.book_id === draggedBookId);
+  const targetIndex = folderBooks.findIndex((b) => b.book_id === targetBookId);
+
+  if (draggedIndex === -1 || targetIndex === -1) return;
+
+  // Move item in the array
+  const [draggedBook] = folderBooks.splice(draggedIndex, 1);
+  folderBooks.splice(targetIndex, 0, draggedBook);
+
+  // Reassign order values
+  const updates = folderBooks.map((b, index) => ({
+    id: b.id,
+    sort_order: index + 1,
+    user_id: userId,
+    folder_id: b.folder_id,
+    book_id: b.book_id,
+  }));
+
+  const { error: updateError } = await supabase
+    .from('folder_books')
+    .upsert(updates, { 
+      onConflict: 'id',
+      ignoreDuplicates: false
+  });
+
+  if (updateError) {
+      console.error('Failed to update order:', updateError);
+  }
+  return updates;
 }

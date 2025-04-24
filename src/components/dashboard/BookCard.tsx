@@ -1,21 +1,20 @@
 "use client";
 
 
+import { reorderBookInFolder } from '@/lib/supabase';
 import { Book } from '@/types';
 import { motion } from 'framer-motion';
 import { BookOpen, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useDrag } from 'react-dnd';
+import { useDrag, useDrop } from 'react-dnd';
 
 export default function BookCard({ book, folderId, parentFolderId, refresh }: { book: Book, folderId: string | null, parentFolderId: string | null, refresh: () => void }) {
 
     const effectiveFolderId = folderId === '__go_up__' ? parentFolderId : folderId;
 
     const [{ isDragging }, drag] = useDrag(() => ({
-        type: 'item',
-        // Use effectiveFolderId for the folderId property in the item payload.
-        // parentFolderId is omitted based on the "only pass one" requirement.
-        item: { id: book.id, folderId: effectiveFolderId, type: 'book', info: book },
+        type: 'book',
+        item: { id: book.id, folderId: effectiveFolderId, info: book },
         collect: (monitor) => ({
             isDragging: !!monitor.isDragging(),
         }),
@@ -27,12 +26,30 @@ export default function BookCard({ book, folderId, parentFolderId, refresh }: { 
         router.push(`/book/${book.book_id}`);
     };
 
+    const [{ isOver }, drop] = useDrop({
+        accept: 'book',
+        drop: (draggedItem: { id: string; folderId: string | null; info: Book }) => {
+            if (
+                draggedItem.id !== book.id &&
+                draggedItem.folderId === effectiveFolderId
+            ) {
+                reorderBookInFolder(draggedItem.id, book.id, effectiveFolderId, book.user_id).then(() => {
+                    refresh?.();
+                });
+            }
+        },
+        collect: monitor => ({
+            isOver: monitor.isOver(),
+        }),
+    });
+
     return (
         <motion.li
             ref={(node) => {
                 drag(node);
+                drop(node);
             }}
-            style={{ opacity: isDragging ? 0.5 : 1 }}
+            style={{ opacity: isDragging ? 0.5 : 1 , backgroundColor: isOver ? 'var(--grey5)' : 'transparent' }}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ y: -2 }}

@@ -14,16 +14,16 @@ interface FolderCardProps {
 
 export default function FolderCard({ folder, onFolderClick, refresh }: FolderCardProps) {
     const [{ isDragging }, drag] = useDrag(() => ({
-        type: 'item',
-        item: { id: folder.id, type: 'folder' },
+        type: 'folder',
+        item: { id: folder.id },
         collect: (monitor) => ({
             isDragging: !!monitor.isDragging(),
         }),
     }));
 
     const [{ isOver }, drop] = useDrop(() => ({
-        accept: 'item',
-        drop: (item: { id: string; folderId: string, type: string, info: Book }) => {
+        accept: 'book',
+        drop: (item: { id: string; folderId: string, info: Book }) => {
             if (item.info.user_id) {
                 addBookToFolder(item.id, item.folderId, folder.id, item.info.user_id).then(() => {
                     if (typeof refresh === 'function') {
