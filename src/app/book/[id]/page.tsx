@@ -13,8 +13,8 @@ export default function BookDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
-  const [book, setBook] = useState<any>(null);
-  const [item, setItem] = useState<any>(null);
+  const [book, setBook] = useState<Book>();
+  const [item, setItem] = useState<BookFromAPI>();
   const [isInCollection, setIsInCollection] = useState(false);
 
   useEffect(() => {

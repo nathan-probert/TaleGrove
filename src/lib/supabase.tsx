@@ -72,18 +72,19 @@ export async function updatePassword(
 }
 
 // Book related functions
-export async function addBook(bookData: Book): Promise<Book> {
-  // Remove the ID from the bookData object before inserting as it is auto-generated
-  const { id, ...insertData } = bookData;
+export async function addBook(bookData: Omit<Book, 'id'>): Promise<Book> {
+  const insertData = bookData satisfies Omit<Book, 'id'>;
 
   const { data, error } = await supabase
     .from('books')
     .insert([insertData])
-    .select()
+    .select('*')
     .single();
 
-  if (error) throw error;
-  return data;
+  if (error) {
+    throw new Error(`Failed to add book "${bookData.title}": ${error.message}`);
+  }
+  return data as Book;
 }
 
 export async function deleteBook(bookId: string, userId: string) {
@@ -170,10 +171,8 @@ export async function createFolder(name: string, userId: string, parentId: strin
 }
 
 export async function addBookToFolder(bookId: string, oldFolderId: string, folderId: string | null, userId: string) {
-  let data: any = null;
-
   if (folderId !== "null") {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('folder_books')
       .insert([{ book_id: bookId, folder_id: folderId, user_id: userId }]);
 
@@ -189,8 +188,6 @@ export async function addBookToFolder(bookId: string, oldFolderId: string, folde
       .eq('folder_id', oldFolderId)
       .eq('user_id', userId);
   }
-
-  return data;
 }
 
 export async function addBookToFolders(bookId: string, folderIds: string[], userId: string) {
@@ -358,7 +355,7 @@ export async function saveRecommendation(
     user_id: userId,
   };
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('book_recommendations')
     .upsert(insertData)
     .select()

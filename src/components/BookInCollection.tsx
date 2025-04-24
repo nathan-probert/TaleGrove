@@ -1,7 +1,7 @@
 import { Book, BookStatus, Folder, BookFromAPI } from "@/types";
 import { getUserId, deleteBook, removeBookFromFolders, getFoldersFromBook, updateBookDetails } from "@/lib/supabase";
 import { useEffect, useState } from "react";
-import { ArrowLeft, FolderIcon, Trash2, ImageIcon, Edit } from "lucide-react";
+import { ArrowLeft, Trash2, ImageIcon, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { RemoveBookModal } from "./Modals/RemoveBookModal";
 import { EditBookModal } from "./Modals/EditBookModal";
@@ -17,7 +17,6 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>([]);
-  const [isLoadingFolders, setIsLoadingFolders] = useState(true);
   const [isRemoving, setIsRemoving] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editedStatus, setEditedStatus] = useState<BookStatus>(book.status || BookStatus.wishlist);
@@ -35,7 +34,6 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
 
   useEffect(() => {
     const loadFolders = async () => {
-      setIsLoadingFolders(true);
       const userId = await getUserId();
 
       if (userId) {
@@ -46,7 +44,6 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
           console.error("Failed to fetch folders:", error);
         }
       }
-      setIsLoadingFolders(false);
     };
     loadFolders();
   }, [book.id]);

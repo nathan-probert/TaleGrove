@@ -5,30 +5,40 @@ import { useParams, useRouter } from 'next/navigation';
 import { getUserId, checkIfBookInCollection, changeBookCover } from '@/lib/supabase';
 import { getCoverUrl } from '@/lib/books_api';
 import { Loader2 } from 'lucide-react';
+import { Book, BookStatus, GoogleBooksVolume, IndustryIdentifier, OpenLibraryDoc } from '@/types';
 
 export default function BookCoversPage() {
     const params = useParams();
     const router = useRouter();
     const id = params?.id as string;
-    const [book, setBook] = useState<any>(null);
-    const [item, setItem] = useState<any>(null); // Track the entire item from Google Books API
-    const [covers, setCovers] = useState<string[]>([]); // Track the covers
+    const [book, setBook] = useState<Book>({
+        id: "id",
+        title: 'No Title',
+        author: 'Unknown Author',
+        rating: null,
+        notes: null,
+        user_id:"",
+        status: BookStatus.wishlist,
+        categories: [],
+        book_id: "id",
+        isbn: "",
+        cover_url: "",
+    });
+    const [covers, setCovers] = useState<string[]>([]);
     const [isInCollection, setIsInCollection] = useState(false);
-    const [publisherQuery, setPublisherQuery] = useState(''); // State for publisher input
+    const [publisherQuery, setPublisherQuery] = useState('');
     const [isLoading, setIsLoading] = useState(true);
 
-    const fetchCovers = async (publisher?: string) => {
-        if (!item) return;
+    const fetchCovers = async (id: string, title: string, publisher?: string) => {
         setIsLoading(true);
 
         const apiKey = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY;
-        const volumeInfo = item.volumeInfo;
         const coverUrls: string[] = [];
 
         // check google for covers
-        if (volumeInfo.title) {
+        if (title) {
             try {
-                let googleQuery = `q=${encodeURIComponent(volumeInfo.title)}`;
+                let googleQuery = `q=${encodeURIComponent(title)}`;
                 if (publisher) {
                     googleQuery += `+inpublisher:${encodeURIComponent(publisher)}`;
                 }
@@ -36,7 +46,7 @@ export default function BookCoversPage() {
                 if (googleRes.ok) {
                     const googleData = await googleRes.json();
                     if (googleData.items && googleData.items.length > 0) {
-                        googleData.items.forEach((item: any) => {
+                        googleData.items.forEach((item: GoogleBooksVolume) => {
                             // Ensure cover exists and avoid duplicates
                             const coverUrl = getCoverUrl(item.id);
                             if (coverUrl && !coverUrls.includes(coverUrl)) {
@@ -51,9 +61,9 @@ export default function BookCoversPage() {
         }
 
         // check open library for covers
-        if (volumeInfo.title) {
+        if (title) {
             try {
-                let openLibraryQuery = `title=${encodeURIComponent(volumeInfo.title)}`;
+                let openLibraryQuery = `title=${encodeURIComponent(title)}`;
                 if (publisher) {
                     openLibraryQuery += `&publisher=${encodeURIComponent(publisher)}`;
                 }
@@ -61,7 +71,7 @@ export default function BookCoversPage() {
                 if (openLibraryRes.ok) {
                     const openLibraryData = await openLibraryRes.json();
                     if (openLibraryData.docs && openLibraryData.docs.length > 0) {
-                        openLibraryData.docs.forEach((doc: any) => {
+                        openLibraryData.docs.forEach((doc: OpenLibraryDoc) => {
                             if (doc.cover_i) {
                                 const coverUrl = `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`;
                                 // Avoid duplicates
@@ -78,7 +88,7 @@ export default function BookCoversPage() {
         }
 
         // Add the original cover from the item if available and not already included
-        const originalCover = getCoverUrl(item.id);
+        const originalCover = getCoverUrl(id);
         if (originalCover && !coverUrls.includes(originalCover)) {
             coverUrls.unshift(originalCover); // Add to the beginning
         }
@@ -104,30 +114,30 @@ export default function BookCoversPage() {
 
             const res = await fetch(`https://www.googleapis.com/books/v1/volumes/${id}?key=${apiKey}`);
             const fetchedItem = await res.json();
-            setItem(fetchedItem); // Set item first
 
             const volumeInfo = fetchedItem.volumeInfo;
             const userId = await getUserId();
 
             let foundIsbn: string | null = null;
             if (volumeInfo.industryIdentifiers) {
-                const isbn13 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13');
-                const isbn10 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10');
+                const isbn13 = volumeInfo.industryIdentifiers.find((id: IndustryIdentifier) => id.type === 'ISBN_13');
+                const isbn10 = volumeInfo.industryIdentifiers.find((id: IndustryIdentifier) => id.type === 'ISBN_10');
                 foundIsbn = isbn13?.identifier ?? isbn10?.identifier ?? null;
             }
 
             // Set initial book state
             setBook({
-                id: fetchedItem.id, // Use Google's ID initially, might be overwritten if in collection
+                id: fetchedItem.id,
                 title: volumeInfo.title || 'No Title',
                 author: volumeInfo.authors ? volumeInfo.authors.join(', ') : 'Unknown Author',
                 rating: null,
                 notes: null,
-                user_id: userId ?? undefined,
-                status: "reading", // Default or fetch from collection
-                book_id: fetchedItem.id, // Google Books Volume ID
-                isbn: foundIsbn,
-                cover_url: getCoverUrl(fetchedItem.id) || null, // Initial cover
+                user_id: userId ?? "",
+                status: BookStatus.wishlist,
+                categories: [],
+                book_id: fetchedItem.id,
+                isbn: foundIsbn ?? "",
+                cover_url: getCoverUrl(fetchedItem.id) ?? "",
             });
 
             if (userId) {
@@ -135,7 +145,7 @@ export default function BookCoversPage() {
                 setIsInCollection(!!collectionData);
                 if (collectionData) {
                     // If book is in collection, update book state with collection data
-                    setBook((prevBook: any) => ({
+                    setBook((prevBook: Book) => ({
                         ...prevBook,
                         id: collectionData.id, // Use Supabase row ID
                         rating: collectionData.rating,
@@ -148,21 +158,16 @@ export default function BookCoversPage() {
             } else {
                 setIsInCollection(false);
             }
+
+            fetchCovers(fetchedItem.id, volumeInfo.title, publisherQuery);
         };
 
         if (id) fetchInitialData();
-    }, [id]);
-
-    // Fetch covers once the item is loaded
-    useEffect(() => {
-        if (item) {
-            fetchCovers(); // Initial fetch without publisher filter
-        }
-    }, [item]); // Dependency on item ensures it runs after item is set
+    }, [id, publisherQuery]);
 
 
     const handleSearch = () => {
-        fetchCovers(publisherQuery);
+        fetchCovers(book.id, book.title, publisherQuery);
     };
 
     const handleBack = () => {

@@ -29,7 +29,7 @@ export default function BookNotInCollection({ book, item, onBack, reload }: Book
     notes: string
   ) => {
     // Add status and conditionally add rating/notes to the book data
-    let bookDataWithDetails: Partial<Book> & { status: BookStatus } = {
+    const bookDataWithDetails: Partial<Book> & { status: BookStatus } = {
       ...book,
       status: status,
     };
@@ -73,11 +73,7 @@ export default function BookNotInCollection({ book, item, onBack, reload }: Book
       alert("Please log in to add books to your collection.");
       return;
     }
-
-    // Have 'Root' folder selected by default
-    const rootFolder = folders.find(folder => folder.name === 'Root');
-    setSelectedFolderIds(rootFolder ? [rootFolder.id] : []);
-
+    
     setRating(null);
     setNotes('');
     setIsModalOpen(true);
@@ -86,7 +82,7 @@ export default function BookNotInCollection({ book, item, onBack, reload }: Book
   // Handler for checkbox changes
   const handleFolderSelectionChange = (folderId: string, isSelected: boolean) => {
     setSelectedFolderIds(prev => {
-      let updated = isSelected
+      const updated = isSelected
         ? [...prev, folderId]
         : prev.filter(id => id !== folderId);
 

@@ -106,8 +106,6 @@ export default function HomePage() {
   };
 
   const handleAccept = () => {
-    const rootFolder = folders.find(folder => folder.name === 'Root');
-    setSelectedFolderIds(rootFolder ? [rootFolder.id] : []);
     setSelectedStatus(BookStatus.wishlist);
     setRating(null);
     setNotes('');
@@ -136,7 +134,7 @@ export default function HomePage() {
     notes: string
   ) => {
     // Add status and conditionally add rating/notes to the book data
-    let bookDataWithDetails: Partial<Book> & { status: BookStatus } = {
+    const bookDataWithDetails: Partial<Book> & { status: BookStatus } = {
       ...book,
       status: status,
     };

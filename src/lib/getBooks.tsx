@@ -14,7 +14,7 @@ export async function fetchUserBooksAndFolders(userId: string, parentFolderId: s
     .map(folder => ({ ...folder, isFolder: true }));
 
   // Now get the books in the folder
-  let books: Book[] = await getBooksInFolder(parentFolderId, userId);
+  const books: Book[] = await getBooksInFolder(parentFolderId, userId);
 
   return [...folders, ...books];
 }

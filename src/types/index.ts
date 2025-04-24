@@ -67,3 +67,52 @@ export type OpenLibraryRecommendationInfo = {
   publishYear: string;
   isbn: string;
 }
+
+export type IndustryIdentifier = {
+  type: string;
+  identifier: string;
+}
+
+export type GoogleBooksVolume = {
+  id: string;
+  volumeInfo: {
+    title: string;
+    authors?: string[];
+    publisher?: string;
+    description?: string;
+    IndustryIdentifiers?: IndustryIdentifier[];
+    pageCount?: number;
+    printedPageCount?: number;
+    printType?: string;
+    categories?: string[];
+    averageRating?: number;
+    ratingsCount?: number;
+    contentVersion?: string;
+    language?: string;
+    publishedDate?: string;
+  };
+};
+
+export type Author = {
+  author: {
+    key: string;
+  };
+}
+export type OpenLibraryDoc = {
+  id: string;
+  key: string;
+  title: string;
+  authors: Author[];
+  cover_edition_key: string;
+  cover_i: number;
+  first_publish_year: number;
+  isbn?: string[];
+  subject?: string[];
+  publish_year?: number[];
+  publish_place?: string[];
+  edition_key?: string[];
+  author_key?: string[];
+  lccn?: string[];
+  oclc?: string[];
+  description?: string;
+}

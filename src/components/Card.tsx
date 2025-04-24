@@ -6,6 +6,7 @@ import { BookOpen, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useDrag, useDrop } from 'react-dnd';
 import { reorderBookInFolder } from '@/lib/supabase';
+import { ComponentType } from 'react';
 
 interface CardProps {
   book: Book;
@@ -16,97 +17,119 @@ interface CardProps {
   isSearch?: boolean;
 }
 
-// Helper component to wrap draggable functionality
-const WithDnD = (Component: React.ComponentType<any>) => (props: any) => {
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: 'book',
-    item: { id: props.book.id, folderId: props.effectiveFolderId, info: props.book },
-    collect: (monitor) => ({
-      isDragging: !!monitor.isDragging(),
-    }),
-  }));
+interface DnDWrapperProps {
+  book: Book;
+  effectiveFolderId?: string | null;
+  refresh?: () => void;
+  handleClick: () => void;
+  isSearch?: boolean;
+}
 
-  const [{ isOver }, drop] = useDrop({
-    accept: 'book',
-    drop: (draggedItem: { id: string; folderId: string | null; info: Book }) => {
-      if (draggedItem.id !== props.book.id && draggedItem.folderId === props.effectiveFolderId) {
-        reorderBookInFolder(
-          draggedItem.id,
-          props.book.id,
-          props.effectiveFolderId,
-          props.book.user_id
-        ).then(() => {
-          props.refresh?.();
-        });
-      }
-    },
-    collect: monitor => ({
-      isOver: monitor.isOver(),
-    }),
-  });
+interface BaseCardProps {
+  book: Book;
+  isSearch?: boolean;
+  handleClick: () => void;
+}
 
-  return (
-    <div ref={(node) => {
-      drag(node);
-      drop(node);
-    }} style={{ 
-      opacity: isDragging ? 0.5 : 1,
-      backgroundColor: isOver ? 'var(--grey5)' : 'transparent'
-    }}>
-      <Component {...props} />
-    </div>
-  );
+type DraggedItemType = {
+  id: string;
+  folderId: string | null;
+  info: Book;
+};
+
+const WithDnD = (Component: ComponentType<DnDWrapperProps>) => {
+  const WrappedComponent = (props: DnDWrapperProps) => {
+    const [{ isDragging }, drag] = useDrag(() => ({
+      type: 'book',
+      item: { 
+        id: props.book.id, 
+        folderId: props.effectiveFolderId, 
+        info: props.book 
+      },
+      collect: (monitor) => ({
+        isDragging: !!monitor.isDragging(),
+      }),
+    }));
+
+    const [{ isOver }, drop] = useDrop({
+      accept: 'book',
+      drop: (draggedItem: DraggedItemType) => {
+        if (draggedItem.id !== props.book.id && 
+            draggedItem.folderId === props.effectiveFolderId) {
+          reorderBookInFolder(
+            draggedItem.id,
+            props.book.id,
+            props.effectiveFolderId,
+            props.book.user_id
+          ).then(() => {
+            props.refresh?.();
+          });
+        }
+      },
+      collect: monitor => ({
+        isOver: monitor.isOver(),
+      }),
+    });
+
+    return (
+      <div 
+        ref={(node) => {
+          drag(node);
+          drop(node);
+        }} 
+        style={{ 
+          opacity: isDragging ? 0.5 : 1,
+          backgroundColor: isOver ? 'var(--grey5)' : 'transparent'
+        }}
+      >
+        <Component {...props} />
+      </div>
+    );
+  };
+
+  WrappedComponent.displayName = `WithDnD(${Component.displayName || Component.name || 'Component'})`;
+  return WrappedComponent;
 };
 
 function BaseCard({
   book,
-  effectiveFolderId,
   isSearch = false,
   handleClick
-}: { 
-  book: Book;
-  effectiveFolderId?: string | null;
-  isSearch?: boolean;
-  handleClick: () => void;
-}) {
+}: BaseCardProps) {
   return (
     <motion.li
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -2 }}
       transition={{ duration: 0.2 }}
-      className={`group relative flex flex-col h-full rounded-lg bg-background shadow-sm hover:shadow-md border-primary transition-shadow border`}
+      className="group relative flex flex-col h-full rounded-lg bg-background shadow-sm hover:shadow-md border-primary transition-shadow border"
     >
       <button
         onClick={handleClick}
-        className={`cursor-pointer w-full text-left group flex flex-col h-full p-4 relative`}
+        className="cursor-pointer w-full text-left group flex flex-col h-full p-4 relative"
       >
-
-        {/* Book Cover */}
-        <div className={`w-full bg-background border-foreground rounded-lg overflow-hidden aspect-[2/3] mb-4 border`}>
+        <div className="w-full bg-background border-foreground rounded-lg overflow-hidden aspect-[2/3] mb-4 border">
           {book.cover_url ? (
             <img
               src={book.cover_url}
               alt={book.title}
-              className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105`}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-              <BookOpen className={`w-12 h-12 text-grey3`} />
+              <BookOpen className="w-12 h-12 text-grey3" />
             </div>
           )}
         </div>
 
-        {/* Content */}
         <div className="flex-1">
-          <h3 className={`text-lg font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors`}>
+          <h3 className="text-lg font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
             {book.title}
           </h3>
-          <p className={`text-sm text-grey2 line-clamp-1`}>
+          <p className="text-sm text-grey2 line-clamp-1">
             {book.author || 'Unknown Author'}
           </p>
 
-          {/* Status & Rating (only for non-search cards) */}
           {!isSearch && (
             <div className="flex items-center gap-2 mt-3">
               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -123,7 +146,7 @@ function BaseCard({
             </div>
           )}
         </div>
-        </button>
+      </button>
     </motion.li>
   );
 }
@@ -140,9 +163,11 @@ export default function Card(props: CardProps) {
 
   return props.isDraggable ? (
     <DnDCard 
-      {...props}
+      book={props.book}
       effectiveFolderId={effectiveFolderId}
+      refresh={props.refresh}
       handleClick={handleClick}
+      isSearch={props.isSearch}
     />
   ) : (
     <BaseCard 

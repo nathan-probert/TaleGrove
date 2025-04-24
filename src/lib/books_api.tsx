@@ -2,7 +2,7 @@
 
 // UPDATE: USING GOOGLE BOOKS API FOR NOW, OPENLIBRARY IS MORE CUBERSOME AS I HAVE TO MAKE MULTIPLE CALLS TO GET THE DATA I NEED
 
-import { BookFromAPI, OpenLibraryRecommendationInfo } from "@/types";
+import { Author, BookFromAPI, GoogleBooksVolume, IndustryIdentifier, OpenLibraryDoc, OpenLibraryRecommendationInfo } from "@/types";
 
 
 const useGoogle = true;
@@ -23,13 +23,13 @@ function _parseCategories(categories: string[]): string[] {
 }
 
 
-function googleToGeneral(fetchedItem: any): BookFromAPI {
-    const volumeInfo = fetchedItem["volumeInfo"] || {};
+function googleToGeneral(fetchedItem: GoogleBooksVolume): BookFromAPI {
+    const volumeInfo = fetchedItem.volumeInfo || {};
 
     let foundIsbn: string | null = null;
-    if (volumeInfo.industryIdentifiers) {
-        const isbn13 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13');
-        const isbn10 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10');
+    if (volumeInfo.IndustryIdentifiers) {
+        const isbn13 = volumeInfo.IndustryIdentifiers.find((id: IndustryIdentifier) => id.type === 'ISBN_13');
+        const isbn10 = volumeInfo.IndustryIdentifiers.find((id: IndustryIdentifier) => id.type === 'ISBN_10');
         foundIsbn = isbn13?.identifier ?? isbn10?.identifier ?? null;
     }
 
@@ -45,13 +45,13 @@ function googleToGeneral(fetchedItem: any): BookFromAPI {
     } as BookFromAPI;
 }
 
-async function openLibraryToGeneral(fetchedItem: any): Promise<BookFromAPI> {
+async function openLibraryToGeneral(fetchedItem: OpenLibraryDoc): Promise<BookFromAPI> {
     const title = fetchedItem.title ?? "Unknown Title";
     const description = fetchedItem.description ?? "No description available.";
 
     // Get author names
-    const authorKeys = (fetchedItem.authors ?? []).map((a: any) => a.author.key);
-    const authors = await Promise.all(
+    const authorKeys = (fetchedItem.authors ?? [] satisfies Author[]).map(a => a.author.key);
+        const authors = await Promise.all(
         authorKeys.map(async (key: string) => {
             const res = await fetch(`https://openlibrary.org${key}.json`);
             const data = await res.json();
@@ -114,7 +114,7 @@ export async function searchForBooks(title: string, author: string, maxResults: 
         const res = await fetch(url);
         const fetchedItems = await res.json();
 
-        let processedResults: BookFromAPI[] = [];
+        const processedResults: BookFromAPI[] = [];
         if (!fetchedItems.items) {
             console.error("No items found in the response.");
             return processedResults;
@@ -137,10 +137,10 @@ export async function searchForBooks(title: string, author: string, maxResults: 
         const data = await res.json();
 
         const books = await Promise.all(
-            data.docs.slice(0, maxResults).map(async (doc: any) => {
+            data.docs.slice(0, maxResults).map(async (doc: OpenLibraryDoc) => {
                 const bookId = doc.key?.replace("/works/", "");
                 const title = doc.title ?? "Unknown Title";
-                const authors = doc.author_name?.join(", ") ?? "Unknown Author";
+                const authors = doc.authors.join(", ") ?? "Unknown Author";
 
                 return await _getOpenLibraryBookData(bookId, title, authors);
             })
@@ -150,7 +150,7 @@ export async function searchForBooks(title: string, author: string, maxResults: 
     }
 }
 
-async function _getOpenLibraryBookData(bookId: any, title: any, authors: any): Promise<BookFromAPI> {
+async function _getOpenLibraryBookData(bookId: string, title: string, authors: string): Promise<BookFromAPI> {
     const editionRes = await fetch(`https://openlibrary.org/works/${bookId}.json`);
     const editionData = await editionRes.json();
     const firstEdition = editionData.entries?.[0];
@@ -214,24 +214,29 @@ export async function getOpenLibraryRecommendation(title: string, author: string
 
     // get other info from google books
     // Google search is weird, sometimes it won't return the correct book first
-    let g_doc: any = null;
+    let g_doc: GoogleBooksVolume | null = null;
     for (const item of g_data.items) {
         if (item.volumeInfo.title === title) {
             g_doc = item;
             break;
         }
     }
-
     if (!g_doc) {
         g_doc = g_data.items[0];
     }
+    if (!g_doc) {
+        throw new Error("No results found in Google Books for the given title and author.");
+    }
 
-    const volumeInfo = g_doc["volumeInfo"] || {};
+    const volumeInfo = g_doc?.volumeInfo;
+    if (!volumeInfo) {
+        throw new Error("No volume info found in Google Books API response.");
+    }
 
     let foundIsbn: string | null = null;
-    if (volumeInfo.industryIdentifiers) {
-        const isbn13 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_13');
-        const isbn10 = volumeInfo.industryIdentifiers.find((id: any) => id.type === 'ISBN_10');
+    if (volumeInfo.IndustryIdentifiers) {
+        const isbn13 = volumeInfo.IndustryIdentifiers.find((id: IndustryIdentifier) => id.type === 'ISBN_13');
+        const isbn10 = volumeInfo.IndustryIdentifiers.find((id: IndustryIdentifier) => id.type === 'ISBN_10');
         foundIsbn = isbn13?.identifier ?? isbn10?.identifier ?? null;
     }
 
@@ -243,7 +248,6 @@ export async function getOpenLibraryRecommendation(title: string, author: string
         }
     }
 
-    console.log("Description before cleaning:", description);
     if (description) {
         // Convert Windows-style newlines to UNIX-style
         description = description.replace(/\r\n/g, '\n');
@@ -265,12 +269,7 @@ export async function getOpenLibraryRecommendation(title: string, author: string
     }
 
 
-    console.log("Description after cleaning:", description);
-
-    console.log("Categories before parsing:", volumeInfo.categories);
     const categories = volumeInfo.categories ? _parseCategories(volumeInfo.categories) : [];
-    console.log("Parsed categories:", categories);
-
     return {
         id: g_doc.id,
         title: volumeInfo.title || "No Title",

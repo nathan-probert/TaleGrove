@@ -11,7 +11,7 @@ import { getCoverUrl, searchForBooks } from '@/lib/books_api';
 
 // Function to parse data for books
 const parseBookData = (data: BookFromAPI[], userId: string): Book[] => {
-  let books: Book[] = [];
+  const books: Book[] = [];
 
   for (const item of data) {
     books.push({
@@ -59,8 +59,13 @@ export default function SearchBook() {
       const processedResults = parseBookData(data, userId);
 
       setResults(processedResults);
-    } catch (err: any) {
-      console.error('Error fetching from Google Books API:', err);
+        } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error('Error fetching from Google Books API:', err.message);
+      } else {
+        console.error('An unknown error occurred while fetching from Google Books API:', err);
+      }
+
     } finally {
       setLoading(false);
       setMadeSearch(true);
@@ -158,7 +163,7 @@ export default function SearchBook() {
               <p className="text-foreground/60">
                 {title || author ? (
                   <>
-                    No matches found for "<span className="text-primary">{title || author}</span>"
+                    No matches found for &quot;<span className="text-primary">{title || author}</span>&quot;
                   </>
                 ) : (
                   'No results found. Please try again.'

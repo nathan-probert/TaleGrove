@@ -1,18 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import BookList from '@/components/dashboard/BookList';
 import { BookOrFolder, Folder } from '@/types';
 import { fetchUserBooksAndFolders } from '@/lib/getBooks';
 import supabase, { createFolder, getRootId, deleteFolder, getCurrentUser } from '@/lib/supabase'; // Import deleteFolder
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, Trash2 } from 'lucide-react'; // Import Trash2 icon
+import { Loader2, Trash2 } from 'lucide-react';
 
 
 export default function Books() {
     const params = useParams();
-    const slugArray = params?.slug ? (Array.isArray(params.slug) ? params.slug : [params.slug]) : [];
+    const slugArray = useMemo(() => 
+        params?.slug ? (Array.isArray(params.slug) ? params.slug : [params.slug]) : []
+    , [params?.slug]);
 
     const [books, setBooks] = useState<BookOrFolder[]>([]);
     const [userId, setUserId] = useState<string | null>(null);
@@ -28,7 +30,7 @@ export default function Books() {
 
     const router = useRouter();
 
-    const resolveFolderPath = async (userId: string, slugPath: string[]) => {
+    const resolveFolderPath = useCallback(async (userId: string, slugPath: string[]) => {
         let parentId: string | null = null;
         const crumbs: { id: string | null, name: string, slug: string | null }[] = [{ id: null, name: 'Home', slug: null }];
 
@@ -61,9 +63,9 @@ export default function Books() {
         }
 
         return { folderId: parentId, breadcrumbs: crumbs };
-    };
+    }, [parentFolderId]);
 
-    const fetchData = async (userId: string, slugPath: string[]) => {
+    const fetchData = useCallback(async (userId: string, slugPath: string[]) => {
         setIsLoading(true);
         try {
             let { folderId, breadcrumbs: resolvedBreadcrumbs } = await resolveFolderPath(userId, slugPath);
@@ -96,7 +98,7 @@ export default function Books() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [router, resolveFolderPath]);
 
 
     // Check if user is logged in and fetch data
@@ -120,7 +122,7 @@ export default function Books() {
         };
 
         initializeAuth();
-    }, [router, slugArray.join('/')]);
+    }, [router, slugArray, fetchData]);
 
 
     // Handle folder click (pass this down to BookList)
