@@ -3,6 +3,7 @@
 // UPDATE: USING GOOGLE BOOKS API FOR NOW, OPENLIBRARY IS MORE CUBERSOME AS I HAVE TO MAKE MULTIPLE CALLS TO GET THE DATA I NEED
 
 import { BookFromAPI, OpenLibraryRecommendationInfo } from "@/types";
+import { ol } from "framer-motion/client";
 
 
 const useGoogle = true;
@@ -162,12 +163,21 @@ export async function getOpenLibraryRecommendation(title: string, author: string
 
     const ol_url = `https://openlibrary.org/search.json?${ol_query}&limit=${maxResults}`;
     const g_url = `https://www.googleapis.com/books/v1/volumes?${g_query}&maxResults=15&langRestrict=en&key=${googleApiKey}`;
+    console.log(ol_url);
     console.log(g_url);
 
-    const ol_res = await fetch(ol_url);
-    const ol_data = await ol_res.json();
+    let ol_res = await fetch(ol_url);
+    let ol_data = await ol_res.json();
     const g_res = await fetch(g_url);
     const g_data = await g_res.json();
+
+    if (ol_data.docs.length === 0) {
+        // try removing author from query
+        const ol_query_no_author = `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=${maxResults}`;
+        ol_res = await fetch(ol_query_no_author);
+        ol_data = await ol_res.json();
+        throw new Error("No results found in OpenLibrary for the given title and author.");
+    }
 
     // get description from openlibrary
     const ol_doc = ol_data.docs[0];
@@ -176,7 +186,7 @@ export async function getOpenLibraryRecommendation(title: string, author: string
     console.log(ol_book_url);
     const bookRes = await fetch(ol_book_url);
     const bookData = await bookRes.json();
-    let description = "No description available.";
+    let description = null;
     if (bookData.description) {
         if (typeof bookData.description === 'string') {
             description = bookData.description;

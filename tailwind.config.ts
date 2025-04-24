@@ -9,18 +9,14 @@ const config: Config = {
       colors: {
         background: "var(--bg)",
         foreground: "var(--fg)",
-        primary: "#009c41",
-        secondary: "#f215fa",
+        primary: "var(--primary)",
+        secondary: "var(--secondary)",
         grey: "var(--grey)",
         grey2: "var(--grey2)",
         grey3: "var(--grey3)",
         grey4: "var(--grey4)",
         grey5: "var(--grey5)",
         link: "var(--link)",
-      },
-      background: {
-        DEFAULT: '#fa265b', // Light grey for light mode
-        dark: '#fa265b',     // Grey for dark mode
       },
       keyframes: {
         "appear": {

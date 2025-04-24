@@ -11,6 +11,8 @@ body {
 :root {
   --fg: #000000;
   --bg: #dbe1e8;
+  --primary: #009c41;
+  --secondary: #a89f91;
   --grey: #292929;
   --grey2: #4d4d4d;
   --grey3: #b2becd;
@@ -22,6 +24,8 @@ body {
 :root[class="dark"] {
   --fg: #FFFFFF;
   --bg: #141720;
+  --primary: #007135;
+  --secondary: #a89f91;
   --grey: #9c9c9c;
   --grey2: #b2becd;
   --grey3: #212531;

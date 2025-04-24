@@ -4,7 +4,7 @@ import { Book, Folder } from '@/types';
 import { motion } from 'framer-motion';
 import { FolderIcon } from 'lucide-react';
 import { useDrag, useDrop } from 'react-dnd';
-import { addBookToFolder } from '@/lib/supabase';
+import { addBookToFolder, addFolderToFolder } from '@/lib/supabase';
 
 interface FolderCardProps {
     folder: Folder;
@@ -15,25 +15,32 @@ interface FolderCardProps {
 export default function FolderCard({ folder, onFolderClick, refresh }: FolderCardProps) {
     const [{ isDragging }, drag] = useDrag(() => ({
         type: 'folder',
-        item: { id: folder.id },
+        item: { id: folder.id, user_id: folder.user_id, info: folder },
         collect: (monitor) => ({
             isDragging: !!monitor.isDragging(),
         }),
     }));
 
     const [{ isOver }, drop] = useDrop(() => ({
-        accept: 'book',
-        drop: (item: { id: string; folderId: string, info: Book }) => {
-            if (item.info.user_id) {
-                addBookToFolder(item.id, item.folderId, folder.id, item.info.user_id).then(() => {
-                    if (typeof refresh === 'function') {
+        accept: ['book', 'folder'],
+        drop: (item: { id: string; folderId: string, info: Book }, monitor) => {
+            const itemType = monitor.getItemType();
+            if (itemType === 'book') {
+                if (item.info.user_id) {
+                    addBookToFolder(item.id, item.folderId, folder.id, item.info.user_id).then(() => {
                         refresh();
-                    } else {
-                        console.warn('refresh is not a function', refresh);
-                    }
-                })
-            } else {
-                console.error("User ID is undefined, cannot add book to folder.");
+                    })
+                } else {
+                    console.error("User ID is undefined, cannot add book to folder.");
+                }
+            } else if (itemType === 'folder') {
+                if (item.info.user_id) {
+                    addFolderToFolder(item.id, folder.id, item.info.user_id).then(() => {
+                        refresh();
+                    })
+                } else {
+                    console.error("User ID is undefined, cannot add folder to folder.");
+                }
             }
         },
         collect: (monitor) => ({
@@ -57,7 +64,7 @@ export default function FolderCard({ folder, onFolderClick, refresh }: FolderCar
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ y: -2 }}
             onClick={handleClick}
-            className="group relative flex flex-col h-full rounded-lg bg-background shadow-sm border border-grey4 overflow-hidden hover:shadow-md transition-shadow"
+            className="group relative flex flex-col h-full rounded-lg bg-background shadow-sm border border-primary overflow-hidden hover:shadow-md transition-shadow"
             style={{
                 opacity: isDragging ? 0.5 : 1,
                 backgroundColor: isOver ? 'var(--grey5)' : 'var(--background)'

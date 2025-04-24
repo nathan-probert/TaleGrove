@@ -35,18 +35,18 @@ export const Modal = ({
   };
 
   return (
-<div className="fixed inset-0 flex items-center justify-center p-4 z-50">
-  <div
-    className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-    onClick={onClose}
-  />
-  <div
-    className="relative bg-background rounded-xl p-6 shadow-xl border border-grey4 max-w-md w-full" 
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="modal-title"
-    onClick={handleContentClick}
-  >
+    <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div
+        className="relative bg-background rounded-xl p-6 shadow-xl border border-grey4 max-w-md w-full" 
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        onClick={handleContentClick}
+      >
         <h2 id="modal-title" className="text-xl font-bold text-foreground mb-4">
           {title}
         </h2>
@@ -59,7 +59,7 @@ export const Modal = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-grey2 hover:text-foreground transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-foreground transition-colors disabled:opacity-50"
             disabled={isLoading}
             aria-label="Cancel"
           >

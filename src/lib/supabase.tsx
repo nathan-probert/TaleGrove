@@ -240,18 +240,6 @@ export async function getParentId(folderId: string, userId: string) {
   return data?.parent_id ?? null;
 }
 
-export async function removeBookFromFolder(bookId: string, folderId: string, userId: string) {
-  const { error } = await supabase
-    .from('folder_books')
-    .delete()
-    .eq('book_id', bookId)
-    .eq('folder_id', folderId)
-    .eq('user_id', userId);
-
-  if (error) throw error;
-  return true;
-}
-
 export async function getBooksInFolder(folderId: string, userId: string) {
   const { data, error } = await supabase
     .from('folder_books')
@@ -272,20 +260,6 @@ export async function getUserFolders(userId: string) {
     .eq('user_id', userId);
 
   if (error) throw error;
-  return data;
-}
-
-export async function fetchUserFolders(userId: string): Promise<Folder[]> {
-  const { data, error } = await supabase
-    .from('folders')
-    .select('*')
-    .eq('user_id', userId);
-
-  if (error) {
-    console.error('Failed to fetch folders:', error);
-    return [];
-  }
-
   return data;
 }
 
@@ -328,6 +302,24 @@ export async function deleteFolder(folderId: string, userId: string) {
 
   if (error) throw error;
   return true;
+}
+
+export async function addFolderToFolder(folderId: string, newParentId: string | null, userId: string) {
+  console.log("folder ID:", folderId);
+  console.log("New parent ID:", newParentId);
+  console.log("User ID:", userId);
+  
+  const { data, error } = await supabase
+    .from('folders')
+    .update({ parent_id: newParentId })
+    .eq('id', folderId)
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (error) { throw error; }
+
+  return data;
 }
 
 

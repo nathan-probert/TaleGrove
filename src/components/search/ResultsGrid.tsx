@@ -23,7 +23,7 @@ export const ResultsGrid = ({ results }: ResultsGridProps) => (
     variants={gridVariants}
     initial="hidden"
     animate="show"
-    className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-6 p-6"
+    className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-5 gap-4"
   >
     {results.map((book) => (
       <SearchBookCard key={book.id} book={book} />

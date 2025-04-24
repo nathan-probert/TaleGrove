@@ -32,16 +32,16 @@ export default function BookList({ items, onFolderClick, folderId, parentFolderI
   const fullList: BookOrFolder[] = isRoot ? items : [goUpFolder, ...items];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-5 gap-4">
       {fullList.map((item) => {
         if (item.isFolder) {
           const folder = item as Folder;
 
-          return ( // Add return statement here
+          return (
             <FolderCard
               key={folder.id}
               folder={folder}
-              onFolderClick={(id: string) => { // Add explicit type 'string' for id
+              onFolderClick={(id: string) => { 
                 if (id === '__go_up__') {
                   if (parentCrumb) {
                     onFolderClick(parentCrumb.id || '');
@@ -58,7 +58,7 @@ export default function BookList({ items, onFolderClick, folderId, parentFolderI
                 }
               }}
             />
-          ); // Keep this closing parenthesis for the return statement
+          );
         } else {
           return <BookCard key={item.id} book={item} refresh={refresh} folderId={folderId} parentFolderId={parentFolderId ?? null} />;
         }
