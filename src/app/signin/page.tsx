@@ -96,7 +96,7 @@ export default function SignIn() {
                                 type="email"
                                 required
                                 className="w-full px-4 py-3 rounded-lg border border-grey4 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-foreground placeholder-grey4 disabled:opacity-50"
-                                placeholder="name@company.com"
+                                placeholder="example@domain.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 disabled={isLoading}

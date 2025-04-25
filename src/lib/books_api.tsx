@@ -18,7 +18,6 @@ function _parseCategories(categories: string[]): string[] {
     }
 
     const cleanedTags = Array.from(tags)
-    console.log("Parsed categories:", cleanedTags);
     return cleanedTags;
 }
 
@@ -80,7 +79,6 @@ async function openLibraryToGeneral(fetchedItem: OpenLibraryDoc): Promise<BookFr
 export async function getBookFromAPI(id: string): Promise<BookFromAPI> {
     if (useGoogle) {
         const res = await fetch(`https://www.googleapis.com/books/v1/volumes/${id}?key=${googleApiKey}`);
-        console.log(`https://www.googleapis.com/books/v1/volumes/${id}?key=${googleApiKey}`);
         const fetchedItem = await res.json();
         return googleToGeneral(fetchedItem);
     } else {
@@ -109,7 +107,6 @@ export async function searchForBooks(title: string, author: string, maxResults: 
         // Include fields parameter to request only necessary data
         const fields = 'items(id,volumeInfo(title,authors, description, categories))';
         const url = `https://www.googleapis.com/books/v1/volumes?${query}&maxResults=${maxResults}&langRestrict=en&fields=${encodeURIComponent(fields)}&key=${googleApiKey}`;
-        console.log(url);
 
         const res = await fetch(url);
         const fetchedItems = await res.json();

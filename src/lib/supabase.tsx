@@ -72,8 +72,9 @@ export async function updatePassword(
 }
 
 // Book related functions
-export async function addBook(bookData: Omit<Book, 'id'>): Promise<Book> {
-  const insertData = bookData satisfies Omit<Book, 'id'>;
+export async function addBook(bookData: Book): Promise<Book> {
+  const insertData = { ...bookData } as Omit<Book, 'id'> & { id?: string };
+  delete insertData.id;
 
   const { data, error } = await supabase
     .from('books')
@@ -84,8 +85,10 @@ export async function addBook(bookData: Omit<Book, 'id'>): Promise<Book> {
   if (error) {
     throw new Error(`Failed to add book "${bookData.title}": ${error.message}`);
   }
+
   return data as Book;
 }
+
 
 export async function deleteBook(bookId: string, userId: string) {
 

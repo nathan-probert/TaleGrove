@@ -69,10 +69,9 @@ export const BaseModal = ({
                         type="button"
                         onClick={onConfirm}
                         disabled={disabled || isLoading}
-                        className={`px-6 py-2 rounded-lg flex items-center gap-2 transition-colors ${variant === "destructive"
-                                ? "bg-red-500 hover:bg-red-600 text-white"
-                                : "bg-primary hover:bg-primary/90 text-white"
-                            }`}
+                        className={`px-6 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+                            disabled ? "opacity-50 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                          }`}
                         aria-label={typeof confirmButtonText === 'string' ? confirmButtonText : 'Confirm'}
                     >
                         {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
