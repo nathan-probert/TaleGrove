@@ -39,13 +39,13 @@ export default function Header() {
 
           <div className="flex items-center space-x-4 mt-4 sm:mt-0">
             <nav className="flex items-center space-x-4">
-              <NavLink href="/books" icon={<Book size={20} />} active={pathname === '/books'}>
+              <NavLink href="/books" icon={<Book size={20} />} active={pathname?.startsWith('/books')}>
                 My Books
               </NavLink>
-              <NavLink href="/search" icon={<Search size={20} />} active={pathname === '/search'}>
+              <NavLink href="/search" icon={<Search size={20} />} active={pathname?.startsWith('/search')}>
                 Search
               </NavLink>
-              <NavLink href="/discover" icon={<Lightbulb size={20} />} active={pathname === '/discover'}>
+              <NavLink href="/discover" icon={<Lightbulb size={20} />} active={pathname?.startsWith('/discover')}>
                 Discover
               </NavLink>
             </nav>

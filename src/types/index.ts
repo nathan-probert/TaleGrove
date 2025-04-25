@@ -12,7 +12,7 @@ export interface Book {
   book_id: string;
   cover_url: string;
   categories: string[];
-  dateRead?: string | null;
+  date_read?: string | null;
   sort_order?: number | null;
 }
 export enum BookStatus {

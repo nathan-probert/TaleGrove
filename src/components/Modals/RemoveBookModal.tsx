@@ -31,7 +31,6 @@ export const RemoveBookModal = ({
         isLoading={isRemoving}
         loadingText="Removing..."
         disabled={isRemoving || (folders.length > 0 && selectedFolderIds.length === 0)}
-        variant="destructive"
         footerContent={
             <>
                 {folders.length > 0 && selectedFolderIds.length === 0 && (

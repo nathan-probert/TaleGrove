@@ -21,8 +21,11 @@ export default function HomePage() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<BookStatus>(BookStatus.wishlist);
+  
   const [rating, setRating] = useState<number | null>(null);
   const [notes, setNotes] = useState<string>('');
+  const [dateRead, setDateRead] = useState<string>('');
+
   const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
@@ -83,6 +86,7 @@ export default function HomePage() {
         status: selectedStatus,
         rating: selectedStatus === BookStatus.completed ? rating : null,
         notes: selectedStatus === BookStatus.completed ? notes : null,
+        date_read: selectedStatus === BookStatus.completed ? dateRead : null,
         book_id: currentBook.id,
         isbn: currentBook.isbn,
         categories: currentBook.categories,
@@ -131,7 +135,8 @@ export default function HomePage() {
     folderIds: string[],
     status: BookStatus,
     rating: number | null,
-    notes: string
+    notes: string | null,
+    dateRead: string | null
   ) => {
     // Add status and conditionally add rating/notes to the book data
     const bookDataWithDetails: Partial<Book> & { status: BookStatus } = {
@@ -141,6 +146,7 @@ export default function HomePage() {
     if (status === BookStatus.completed) {
       bookDataWithDetails.rating = rating;
       bookDataWithDetails.notes = notes;
+      bookDataWithDetails.date_read = dateRead;
     }
 
     // Add book to folder
@@ -167,7 +173,7 @@ export default function HomePage() {
     }
 
     try {
-      await addBookToAllFolders(books[currentIndex], selectedFolderIds, selectedStatus, rating, notes);
+      await addBookToAllFolders(books[currentIndex], selectedFolderIds, selectedStatus, rating, notes, dateRead);
       setIsAddModalOpen(false);
     } catch (error) {
       console.error("Error adding book:", error);
@@ -186,6 +192,7 @@ export default function HomePage() {
     if (newStatus !== BookStatus.completed) {
       setRating(null);
       setNotes('');
+      setDateRead('');
     }
   };
 
@@ -291,6 +298,8 @@ export default function HomePage() {
             setRating={setRating}
             notes={notes}
             setNotes={setNotes}
+            dateRead={dateRead}
+            setDateRead={setDateRead}
             handleFolderSelectionChange={handleFolderSelectionChange}
             handleStatusChange={handleStatusChange}
             statusOptions={statusOptions}

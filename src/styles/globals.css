@@ -125,3 +125,25 @@ html {
   margin-bottom: 1.5rem;
   line-height: 1.6;
 }
+
+input[type="date"].custom-date-input::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
+  position: absolute;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+}
+
+/* Firefox (still shows an icon unless you do this trick) */
+input[type="date"].custom-date-input {
+  color-scheme: light;
+  -moz-appearance: textfield;
+}
+
+/* Optional - Remove spin buttons in some browsers */
+input[type="date"].custom-date-input::-webkit-inner-spin-button,
+input[type="date"].custom-date-input::-webkit-clear-button {
+  display: none;
+}

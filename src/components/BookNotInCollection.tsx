@@ -16,8 +16,11 @@ export default function BookNotInCollection({ book, item, onBack, reload }: Book
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<BookStatus>(BookStatus.wishlist);
+  
   const [rating, setRating] = useState<number | null>(null);
   const [notes, setNotes] = useState<string>('');
+  const [dateRead, setDateRead] = useState<string>('');
+  
   const [isLoadingFolders, setIsLoadingFolders] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
 
@@ -26,7 +29,8 @@ export default function BookNotInCollection({ book, item, onBack, reload }: Book
     folderIds: string[],
     status: BookStatus,
     rating: number | null,
-    notes: string
+    notes: string | null,
+    dateRead: string | null
   ) => {
     // Add status and conditionally add rating/notes to the book data
     const bookDataWithDetails: Partial<Book> & { status: BookStatus } = {
@@ -36,6 +40,7 @@ export default function BookNotInCollection({ book, item, onBack, reload }: Book
     if (status === BookStatus.completed) {
       bookDataWithDetails.rating = rating;
       bookDataWithDetails.notes = notes;
+      bookDataWithDetails.date_read = dateRead;
     }
 
     // Add book to folder
@@ -76,6 +81,8 @@ export default function BookNotInCollection({ book, item, onBack, reload }: Book
     
     setRating(null);
     setNotes('');
+    setDateRead('');
+
     setIsModalOpen(true);
   };
 
@@ -99,6 +106,7 @@ export default function BookNotInCollection({ book, item, onBack, reload }: Book
     if (newStatus !== BookStatus.completed) {
       setRating(null);
       setNotes('');
+      setDateRead('');
     }
   };
 
@@ -121,7 +129,7 @@ export default function BookNotInCollection({ book, item, onBack, reload }: Book
     }
 
     try {
-      await addBookToAllFolders(book, selectedFolderIds, selectedStatus, rating, notes);
+      await addBookToAllFolders(book, selectedFolderIds, selectedStatus, rating, notes, dateRead);
       setIsModalOpen(false);
     } catch (error) {
       console.error("Error adding book:", error);
@@ -186,6 +194,8 @@ export default function BookNotInCollection({ book, item, onBack, reload }: Book
           setRating={setRating}
           notes={notes}
           setNotes={setNotes}
+          dateRead={dateRead}
+          setDateRead={setDateRead}
           handleFolderSelectionChange={handleFolderSelectionChange}
           handleStatusChange={handleStatusChange}
           statusOptions={statusOptions}

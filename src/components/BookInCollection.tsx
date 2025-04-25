@@ -20,8 +20,11 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
   const [isRemoving, setIsRemoving] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editedStatus, setEditedStatus] = useState<BookStatus>(book.status || BookStatus.wishlist);
+  
   const [editedRating, setEditedRating] = useState<number | null>(book.rating || null);
   const [editedNotes, setEditedNotes] = useState<string>(book.notes || '');
+  const [editedDateRead, setEditedDateRead] = useState<string>(book.date_read || '');
+
   const [isUpdating, setIsUpdating] = useState(false);
 
   const router = useRouter();
@@ -160,13 +163,13 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
           {/* Right Column - Content */}
           <div className="flex-1 space-y-6">
             {/* Title & Author */}
-            <div className="pb-6 border-b border-grey4">
+            <div className="pb-2 border-b border-grey4 mb-4">
               <h1 className="text-3xl font-bold text-foreground mb-2">{book.title}</h1>
               <p className="text-lg text-grey2">by {book.author}</p>
             </div>
 
             {/* Status, Rating & Notes */}
-            <div className="space-y-4 pt-4 border-t border-grey4">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-foreground">Status</h3>
@@ -234,6 +237,8 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
             setEditedRating={setEditedRating}
             editedNotes={editedNotes}
             setEditedNotes={setEditedNotes}
+            editedDateRead={editedDateRead}
+            setEditedDateRead={setEditedDateRead}
             isUpdating={isUpdating}
           />
         )}

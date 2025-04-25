@@ -60,8 +60,6 @@ function _cleanJsonResponse(response: string): string {
 async function _generateContent(userData: string, recommendationData: string): Promise<BookRecommendation[]> {
   const prompt = _createPrompt(userData, recommendationData);
 
-  console.log("Prompt for AI model: ", prompt);
-
   try {
     const result = await model.generateContent({
       contents: [
@@ -88,7 +86,6 @@ async function _generateContent(userData: string, recommendationData: string): P
       throw new Error('AI model response did not match the expected schema.');
     }
 
-    console.log('Parsed response:', parsedResponse);
     return parsedResponse as BookRecommendation[];
   } catch (error) {
     if (error instanceof Error) {

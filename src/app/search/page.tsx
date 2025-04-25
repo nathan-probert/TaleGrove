@@ -74,7 +74,7 @@ export default function SearchBook() {
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
-      <div className="w-full mx-auto space-y-8">
+      <div className="max-w-[95rem] mx-auto space-y-8">
         {/* Header Section */}
         <div className="space-y-4">
           <Link href="/books" className="group inline-flex items-center text-sm text-foreground/80 hover:text-primary transition-colors">
