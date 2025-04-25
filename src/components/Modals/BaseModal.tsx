@@ -9,7 +9,6 @@ interface BaseModalProps {
     onConfirm: () => void;
     isLoading?: boolean;
     disabled?: boolean;
-    variant?: "default" | "destructive";
     children: ReactNode;
     footerContent?: ReactNode;
     loadingText?: string;
@@ -23,7 +22,6 @@ export const BaseModal = ({
     onConfirm,
     isLoading = false,
     disabled = false,
-    variant = "default",
     children,
     footerContent,
     loadingText = "Loading...",
