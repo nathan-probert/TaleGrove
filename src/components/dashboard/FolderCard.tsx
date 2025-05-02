@@ -2,83 +2,139 @@
 
 import { Book, Folder } from '@/types';
 import { motion } from 'framer-motion';
-import { FolderIcon } from 'lucide-react';
+import { Book as BookIcon, FolderIcon, ArrowLeftIcon } from 'lucide-react'; // Renamed Book icon import
 import { useDrag, useDrop } from 'react-dnd';
-import { addBookToFolder, addFolderToFolder } from '@/lib/supabase';
+import { addBookToFolder, addFolderToFolder, getBooksInFolder } from '@/lib/supabase';
+import { useEffect, useState } from 'react';
 
 interface FolderCardProps {
-    folder: Folder;
-    onFolderClick?: (folderId: string, name: string) => void;
-    refresh: () => void;
+  folder: Folder;
+  onFolderClick?: (folderId: string, name: string) => void;
+  refresh: () => void;
 }
 
+
 export default function FolderCard({ folder, onFolderClick, refresh }: FolderCardProps) {
-    const [{ isDragging }, drag] = useDrag(() => ({
-        type: 'folder',
-        item: { id: folder.id, user_id: folder.user_id, info: folder },
-        collect: (monitor) => ({
-            isDragging: !!monitor.isDragging(),
-        }),
-    }));
+  const [books, setBooks] = useState<Book[]>([]);
 
-    const [{ isOver }, drop] = useDrop(() => ({
-        accept: ['book', 'folder'],
-        drop: (item: { id: string; folderId: string, info: Book }, monitor) => {
-            const itemType = monitor.getItemType();
-            if (itemType === 'book') {
-                if (item.info.user_id) {
-                    addBookToFolder(item.id, item.folderId, folder.id, item.info.user_id).then(() => {
-                        refresh();
-                    })
-                } else {
-                    console.error("User ID is undefined, cannot add book to folder.");
-                }
-            } else if (itemType === 'folder') {
-                if (item.info.user_id) {
-                    addFolderToFolder(item.id, folder.id, item.info.user_id).then(() => {
-                        refresh();
-                    })
-                } else {
-                    console.error("User ID is undefined, cannot add folder to folder.");
-                }
-            }
-        },
-        collect: (monitor) => ({
-            isOver: !!monitor.isOver(),
-        }),
-    }));
+  useEffect(() => {
+    // Only fetch books if it's not the 'back' folder representation
+    if (folder.parent_id !== null) {
+      getBooksInFolder(folder.id, folder.user_id).then((books) => {
+        setBooks(books);
+      });
+    }
+  }, [folder.id, folder.user_id, folder.parent_id]);
 
-    const handleClick = () => {
-        if (onFolderClick) {
-            onFolderClick(folder.id, folder.name);
-        }
-    };
+  const [{ isDragging }, drag] = useDrag(() => ({
+    type: 'folder',
+    item: { id: folder.id, user_id: folder.user_id, info: folder },
+    collect: (monitor) => ({
+      isDragging: !!monitor.isDragging(),
+    }),
+  }));
 
-    return (
-        <motion.li
-            ref={(node) => {
-                drag(node);
-                drop(node);
-            }}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            whileHover={{ y: -2 }}
-            onClick={handleClick}
-            className="group relative flex flex-col h-full rounded-lg bg-background shadow-sm border border-primary overflow-hidden hover:shadow-md transition-shadow"
-            style={{
-                opacity: isDragging ? 0.5 : 1,
-                backgroundColor: isOver ? 'var(--grey5)' : 'var(--background)'
-            }}
-        >
-            <div className="cursor-pointer w-full text-left group flex flex-col h-full p-4">
-                <div className="w-full bg-grey4/20 rounded-lg overflow-hidden relative flex items-center justify-center aspect-square mb-4">
-                    <FolderIcon className="w-12 h-12 text-primary" />
+  const [{ isOver }, drop] = useDrop(() => ({
+    accept: ['book', 'folder'],
+    drop: (item: any, monitor) => { // Use 'any' or a more specific union type for item
+      const itemType = monitor.getItemType();
+      const draggedItemUserId = item.info?.user_id ?? item.user_id; // Handle potential differences in item structure
+
+      if (!draggedItemUserId) {
+        console.error("User ID is undefined, cannot perform drop operation.");
+        return;
+      }
+
+      if (itemType === 'book') {
+        // Ensure item.id and item.folderId are correctly passed for books
+        const bookId = item.id;
+        const sourceFolderId = item.folderId; // Assuming folderId is part of the book item
+        addBookToFolder(bookId, sourceFolderId, folder.id, draggedItemUserId).then(() => {
+          refresh();
+        });
+      } else if (itemType === 'folder') {
+        // Ensure item.id is correctly passed for folders
+        const folderId = item.id;
+        addFolderToFolder(folderId, folder.id, draggedItemUserId).then(() => {
+          refresh();
+        });
+      }
+    },
+    collect: (monitor) => ({
+      isOver: !!monitor.isOver(),
+    }),
+  }));
+
+  const handleClick = () => {
+    if (onFolderClick) {
+      onFolderClick(folder.id, folder.name);
+    }
+  };
+
+  // Determine grid class based on the number of books
+  const getGridClass = (count: number) => {
+    if (count === 1) return "grid grid-cols-1 grid-rows-1";
+    if (count === 2) return "grid grid-cols-2 grid-rows-1";
+    if (count === 3) return "grid grid-cols-2 grid-rows-2 [&>*:nth-child(3)]:col-span-2 [&>*:nth-child(3)]:w-1/2 [&>*:nth-child(3)]:justify-self-center";
+    return "grid grid-cols-2 grid-rows-2";
+  };
+
+  const booksToDisplay = books.slice(0, 4);
+  const gridClass = getGridClass(booksToDisplay.length);
+
+  return (
+    <motion.li
+      ref={(node) => {
+        drag(node);
+        drop(node);
+      }}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -2 }}
+      onClick={handleClick}
+      className="group relative flex flex-col h-full rounded-lg bg-background shadow-sm border border-primary overflow-hidden hover:shadow-md transition-shadow cursor-pointer" // Added cursor-pointer here
+      style={{
+        opacity: isDragging ? 0.5 : 1,
+        backgroundColor: isOver ? 'var(--grey5)' : 'var(--background)'
+      }}
+    >
+      <div className="w-full text-left group flex flex-col h-full p-4">
+        {/* Visual Representation Area */}
+        <div className={`w-full bg-grey4/20 rounded-lg overflow-hidden relative aspect-square mb-4 ${booksToDisplay.length > 0 ? gridClass : 'flex items-center justify-center'}`}>
+          {booksToDisplay.length === 0 ? (
+            folder.parent_id === null ? (
+              <ArrowLeftIcon className="w-24 h-24 sm:w-36 sm:h-36 text-primary" />
+            ) : (
+              <FolderIcon className="w-24 h-24 sm:w-36 sm:h-36 text-primary" />
+            )
+          ) : (
+            <>
+              {booksToDisplay.map((book, index) => (
+                <div key={book.id || index} className="w-full h-full overflow-hidden">
+                  {book.cover_url ? (
+                    <img
+                      src={book.cover_url}
+                      alt={book.title}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-grey3 flex items-center justify-center">
+                      <BookIcon className="w-6 h-6 text-grey1" />
+                    </div>
+                  )}
                 </div>
-                <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-foreground line-clamp-2">{folder.name}</h3>
-                    <p className="text-sm text-grey2 mt-1">Folder</p>
-                </div>
-            </div>
-        </motion.li>
-    );
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* Folder Name */}
+        <div className="flex-1">
+          <h3 className="text-xl font-semibold text-foreground line-clamp-2">{folder.name}</h3>
+          <p className="text-sm text-muted-foreground line-clamp-2">Folder</p>
+        </div>
+      </div>
+    </motion.li>
+  );
 }

@@ -12,9 +12,9 @@ import { Loader2, Trash2 } from 'lucide-react';
 
 export default function Books() {
     const params = useParams();
-    const slugArray = useMemo(() => 
+    const slugArray = useMemo(() =>
         params?.slug ? (Array.isArray(params.slug) ? params.slug : [params.slug]) : []
-    , [params?.slug]);
+        , [params?.slug]);
 
     const [books, setBooks] = useState<BookOrFolder[]>([]);
     const [userId, setUserId] = useState<string | null>(null);
@@ -313,23 +313,17 @@ export default function Books() {
                     </div>
                 ) : (
                     <div className="space-y-6">
-                        {books.length === 0 ? (
-                            <div className="text-center py-8">
-                                <p className="text-grey2">This folder is empty. Start by adding some books!</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                <BookList
-                                    items={books}
-                                    onFolderClick={handleFolderClick}
-                                    folderId={currentFolderId}
-                                    parentFolderId={parentFolderId}
-                                    parentFolderSlug={breadcrumbs.length > 1 ? breadcrumbs[breadcrumbs.length - 2].slug : null}
-                                    refresh={() => userId && fetchData(userId, slugArray)}
-                                    isRoot={isRoot}
-                                />
-                            </div>
-                        )}
+                        <div className="space-y-4">
+                            <BookList
+                                items={books}
+                                onFolderClick={handleFolderClick}
+                                folderId={currentFolderId}
+                                parentFolderId={parentFolderId}
+                                parentFolderSlug={breadcrumbs.length > 1 ? breadcrumbs[breadcrumbs.length - 2].slug : null}
+                                refresh={() => userId && fetchData(userId, slugArray)}
+                                isRoot={isRoot}
+                            />
+                        </div>
                     </div>
                 )}
             </div>
