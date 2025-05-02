@@ -21,7 +21,7 @@ export default function BookList({ items, onFolderClick, folderId, parentFolderI
 
   const goUpFolder: Folder & { isFolder: true } = {
     id: parentFolderId ?? 'null',
-    name: '⬅️ Go Up',
+    name: parentFolderSlug ?? 'Home',
     slug: parentFolderSlug ?? 'null',
     user_id: '',
     parent_id: null,
@@ -41,7 +41,7 @@ export default function BookList({ items, onFolderClick, folderId, parentFolderI
             <FolderCard
               key={folder.id}
               folder={folder}
-              onFolderClick={(id: string) => { 
+              onFolderClick={(id: string) => {
                 if (id === '__go_up__') {
                   if (parentCrumb) {
                     onFolderClick(parentCrumb.id || '');
