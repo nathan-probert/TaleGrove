@@ -9,6 +9,7 @@ import Image from 'next/image';
 export default function SignUp() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [displayName, setDisplayName] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const router = useRouter();
@@ -18,7 +19,7 @@ export default function SignUp() {
         setError(null);
         setLoading(true);
 
-        const { data, error: signUpError } = await signUpWithEmail(email, password);
+        const { data, error: signUpError } = await signUpWithEmail(email, password, displayName);
 
         setLoading(false);
         if (signUpError) {
@@ -75,8 +76,23 @@ export default function SignUp() {
                                 <span>{error}</span>
                             </div>
                         )}
-
                         <div className="space-y-4">
+                            {/* Display Name Input */}
+                            <div>
+                                <label className="block text-sm font-medium text-foreground mb-2">
+                                    Display Name
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="w-full px-4 py-2.5 rounded-lg border border-grey4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-grey2 text-black"
+                                    placeholder="reader"
+                                    value={displayName}
+                                    onChange={(e) => setDisplayName(e.target.value)}
+                                    disabled={loading}
+                                />
+                            </div>
+
                             {/* Email Input */}
                             <div>
                                 <label className="block text-sm font-medium text-foreground mb-2">
@@ -85,7 +101,7 @@ export default function SignUp() {
                                 <input
                                     type="email"
                                     required
-                                    className="w-full px-4 py-2.5 rounded-lg border border-grey4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-grey2 text-foreground"
+                                    className="w-full px-4 py-2.5 rounded-lg border border-grey4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-grey2 text-black"
                                     placeholder="reader@example.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
@@ -102,7 +118,7 @@ export default function SignUp() {
                                     type="password"
                                     required
                                     minLength={6}
-                                    className="w-full px-4 py-2.5 rounded-lg border border-grey4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-grey2 text-foreground"
+                                    className="w-full px-4 py-2.5 rounded-lg border border-grey4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-grey2 text-black"
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}

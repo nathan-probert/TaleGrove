@@ -1,3 +1,8 @@
+export enum BookStatus {
+  reading = 'reading',
+  completed = 'completed',
+  wishlist = 'wishlist',
+}
 
 // Books in the database
 export interface Book {
@@ -14,11 +19,6 @@ export interface Book {
   categories: string[];
   date_read?: string | null;
   sort_order?: number | null;
-}
-export enum BookStatus {
-  reading = 'reading',
-  completed = 'completed',
-  wishlist = 'wishlist',
 }
 
 // Folders in the database
@@ -115,4 +115,27 @@ export type OpenLibraryDoc = {
   lccn?: string[];
   oclc?: string[];
   description?: string;
+}
+
+export type Group = {
+  id?: string | null;
+  name: string;
+};
+
+export type GroupMember = {
+  id?: string | null;
+  group_id: string;
+  group_name: string;
+  user_id: string;
+  role: GroupRole;
+};
+
+export type GroupMemberWithProfile = GroupMember & {
+  display_name: string;
+};
+
+export enum GroupRole {
+  Admin = 'admin',
+  Member = 'member',
+  Invited = 'invited',
 }

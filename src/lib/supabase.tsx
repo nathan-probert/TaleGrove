@@ -1,5 +1,5 @@
 import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs';
-import { Book, Folder, BookStatus, UserBookData, BookRecommendation } from '@/types';
+import { Book, Folder, BookStatus, UserBookData, BookRecommendation, GroupMember, GroupRole, Group, GroupMemberWithProfile } from '@/types';
 import { UserResponse } from '@supabase/supabase-js';
 
 const supabase = createPagesBrowserClient({
@@ -10,11 +10,18 @@ const supabase = createPagesBrowserClient({
 export default supabase;
 
 // Auth related functions
-export async function signUpWithEmail(email: string, password: string) {
-  return await supabase.auth.signUp({
+export async function signUpWithEmail(email: string, password: string, displayName: string) {
+  const { data, error } = await supabase.auth.signUp({
     email,
-    password
+    password,
+    options: {
+      data: {
+        full_name: displayName,
+      }
+    }
   });
+
+  return { data, error };
 }
 
 export async function signInWithEmail(email: string, password: string) {
@@ -418,4 +425,225 @@ export async function reorderBookInFolder(draggedBookId: string, targetBookId: s
     console.error('Failed to update order:', updateError);
   }
   return updates;
+}
+
+// groups
+export async function sendGroupInvitationId(
+  groupId: string,
+  groupName: string,
+  userId: string
+): Promise<GroupMember[]> {
+  const { data, error } = await supabase
+    .from('group_members')
+    .insert<GroupMember>([
+      {
+        group_id: groupId,
+        group_name: groupName,
+        user_id: userId,
+        role: GroupRole.Invited,
+      }
+    ])
+    .select();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function sendGroupInvitationEmail(
+  groupId: string,
+  groupName: string,
+  email: string
+): Promise<GroupMember[]> {
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('email', email)
+    .single();
+
+  return await sendGroupInvitationId(groupId, groupName, userData?.id!);
+}
+
+export async function acceptGroupInvitation(
+  groupId: string,
+  userId: string
+): Promise<GroupMember[]> {
+  const { data, error } = await supabase
+    .from('group_members')
+    .update({ role: GroupRole.Member })
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .eq('role', GroupRole.Invited)
+    .select();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function rejectGroupInvitation(
+  groupId: string,
+  userId: string
+): Promise<GroupMember[]> {
+  const { data, error } = await supabase
+    .from('group_members')
+    .delete()
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .eq('role', GroupRole.Invited)
+    .select();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchGroupMembers(groupId: string): Promise<GroupMemberWithProfile[]> {
+  const { data: members, error: membersError } = await supabase
+    .from('group_members')
+    .select('id, group_id, user_id, role')
+    .eq('group_id', groupId)
+
+  if (membersError) throw membersError;
+  if (!members || members.length === 0) return [];
+
+  const userIds = members.map(member => member.user_id);
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from('users')
+    .select('id, email')
+    .in('id', userIds);
+
+  if (profilesError) {
+    console.error("Error fetching profiles:", profilesError);
+  }
+
+  return members.map(member => {
+    const profile = profiles?.find(p => p.id === member.user_id);
+    return {
+      id: member.id,
+      group_id: member.group_id,
+      user_id: member.user_id,
+      role: member.role,
+      display_name: profile?.email || 'Unknown User',
+    };
+  }) as GroupMemberWithProfile[];
+}
+
+export async function fetchGroups(userId: string): Promise<Group[]> {
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('group:groups(*)')
+    .eq('user_id', userId)
+    .not('role', 'eq', GroupRole.Invited);
+
+  if (error) throw error;
+
+  return data.map((entry) => entry.group as unknown as Group);
+}
+
+
+export async function createGroup(name: string, userId: string): Promise<Group> {
+  const { data: group, error } = await supabase
+    .from('groups')
+    .insert({ name })
+    .select()
+    .single();
+
+  if (error) throw error;
+  
+  // Add creator as admin
+  await supabase
+    .from('group_members')
+    .insert({
+      group_id: group.id,
+      group_name: group.name,
+      user_id: userId,
+      role: GroupRole.Admin
+    });
+
+  return group;
+}
+
+export async function fetchGroupInvitations(userId: string): Promise<GroupMember[]> {
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('role', GroupRole.Invited);
+
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchGroupById(groupId: string, userId: string): Promise<Group | null> {
+  const { data: membership, error: membershipError } = await supabase
+    .from('group_members')
+    .select('group_id')
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .not('role', 'eq', GroupRole.Invited)
+    .maybeSingle();
+
+  // If user is not a member, deny access by returning null
+  if (membershipError || !membership) {
+    return null;
+  }
+
+  const { data: group, error: groupError } = await supabase
+    .from('groups')
+    .select('*')
+    .eq('id', groupId)
+    .single();
+
+  if (groupError) {
+    console.error('Error fetching group details:', groupError);
+    if (groupError.code === 'PGRST116') {
+        return null;
+    }
+    throw groupError;
+  }
+
+  return group as Group;
+}
+
+export async function kickGroupMember(groupId: string, memberUserIdToKick: string, adminUserId: string): Promise<boolean> {
+  // 1. Verify the requesting user is an admin of this group
+  const { data: adminMembership, error: adminCheckError } = await supabase
+    .from('group_members')
+    .select('role')
+    .eq('group_id', groupId)
+    .eq('user_id', adminUserId)
+    .single();
+
+  if (adminCheckError || !adminMembership) {
+    console.error('Error checking admin status or user not found:', adminCheckError);
+    throw new Error('Could not verify admin status.');
+  }
+
+  if (adminMembership.role !== GroupRole.Admin) {
+    throw new Error('Permission denied: User is not an admin of this group.');
+  }
+
+  // 2. Prevent admin from kicking themselves (should be handled UI-side too, but good safeguard)
+  if (memberUserIdToKick === adminUserId) {
+    throw new Error('Admin cannot kick themselves.');
+  }
+
+  // 3. Kick the member
+  const { error: kickError, count } = await supabase
+    .from('group_members')
+    .delete({ count: 'exact' }) // Ensure we know if a row was deleted
+    .eq('group_id', groupId)
+    .eq('user_id', memberUserIdToKick);
+
+  if (kickError) {
+    console.error('Error kicking member:', kickError);
+    throw new Error('Failed to kick member.');
+  }
+
+  if (count === 0) {
+      console.warn(`Attempted to kick user ${memberUserIdToKick} from group ${groupId}, but they were not found.`);
+      // Optionally throw an error or return false depending on desired behavior
+      return false;
+  }
+
+  return true; // Kicked successfully
 }

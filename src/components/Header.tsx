@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Book, Search, Lightbulb, Moon, Sun } from "lucide-react";
+import { Book, Search, Lightbulb, Moon, Sun, Users } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -47,6 +47,9 @@ export default function Header() {
               </NavLink>
               <NavLink href="/discover" icon={<Lightbulb size={20} />} active={pathname?.startsWith('/discover')}>
                 Discover
+              </NavLink>
+              <NavLink href="/friends" icon={<Users size={20} />} active={pathname?.startsWith('/friends')}>
+                Friends
               </NavLink>
             </nav>
 

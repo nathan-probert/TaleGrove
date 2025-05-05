@@ -9,17 +9,17 @@ if (!apiKey) {
 const genAI = new GoogleGenerativeAI(apiKey);
 
 const model = genAI.getGenerativeModel({
-  model: "models/gemini-1.5-flash",
+  model: "models/gemini-2.0-flash",
 });
 
+// Prompt for single user recommendations
 function _createPrompt(userData: string, recommendationData: string): string {
   return `You are a highly intelligent book recommendation engine.
   
   Using ONLY the JSON data below, recommend EXACTLY 10 unique books that satisfy ALL of the following conditions:
   
-  1. The book is NOT in the user's read, rated, wishlist, or currently reading list.
-  2. The book is NOT in the declined recommendations list.
-  3. The book is NOT mentioned in either JSON dataset in any way.
+  1. The book is NOT in the user's read, rated, wishlist, or currently reading list ("UserBooks").
+  2. The book is NOT in the declined recommendations list ("DeclinedBooks").
   
   Your output must be a single valid JSON array with this precise format:
   [
@@ -36,6 +36,41 @@ function _createPrompt(userData: string, recommendationData: string): string {
   "DeclinedBooks": ${recommendationData}`;
 }
 
+function _createGroupPrompt(
+  allMemberBooksData: string[],
+  allRecommendationsData: string[]
+): string {
+  let prompt = `You are a highly intelligent book recommendation engine specializing in group recommendations.
+
+  Using ONLY the JSON data below, which includes EACH group member’s book lists and previously declined recommendations, suggest EXACTLY 10 unique books that are suitable for EVERYONE in the group.
+
+  You MUST consider each member INDIVIDUALLY. The final list must ONLY include books that:
+  1. Do NOT appear in ANY member's "GroupMemberBooks" list (books they’ve read, rated, wishlisted, or are currently reading).
+  2. Do NOT appear in ANY member's "DeclinedGroupRecommendations" list.
+  3. Are likely to appeal to ALL members based on their individual books and preferences.
+  4. Do NOT favor users with more data—treat ALL members as equally important, regardless of how many books they’ve listed.
+
+  Your output MUST be a single valid JSON array with this exact format:
+  [
+    { "title": "Book Title", "author": "Author Name" },
+    ...
+  ]
+
+  Return ONLY the JSON array—no extra text, notes, or explanations.
+
+  ---
+  `;
+
+  for (let i = 0; i < allMemberBooksData.length; i++) {
+    prompt += `Person ${i + 1}:
+  "GroupMemberBooks": ${allMemberBooksData[i]}
+  "DeclinedGroupRecommendations": ${allRecommendationsData[i]}
+
+  `;
+  }
+
+  return prompt;
+}
 
 
 function _isValidBookRecommendationArray(data: unknown): data is BookRecommendation[] {
@@ -57,9 +92,8 @@ function _cleanJsonResponse(response: string): string {
   return response.replace(/```json|```/g, '').trim();
 }
 
-async function _generateContent(userData: string, recommendationData: string): Promise<BookRecommendation[]> {
-  const prompt = _createPrompt(userData, recommendationData);
-
+// Updated to accept the prompt directly
+async function _generateContent(prompt: string): Promise<BookRecommendation[]> {
   try {
     const result = await model.generateContent({
       contents: [
@@ -100,5 +134,19 @@ async function _generateContent(userData: string, recommendationData: string): P
 export async function generateRecommendations(userData: BookRecommendation[], oldRecommendations: BookRecommendation[]): Promise<BookRecommendation[]> {
   const jsonUserData = JSON.stringify(userData);
   const jsonOldRecommendations = JSON.stringify(oldRecommendations);
-  return await _generateContent(jsonUserData, jsonOldRecommendations);
+  // Create the prompt for single user
+  const prompt = _createPrompt(jsonUserData, jsonOldRecommendations);
+  return await _generateContent(prompt);
+}
+
+export async function generateGroupRecommendations(
+  allMemberBooks: BookRecommendation[][],
+  allRecommendations: BookRecommendation[][]
+): Promise<BookRecommendation[]> {
+  const prompt = _createGroupPrompt(
+    allMemberBooks.map(memberBooks => JSON.stringify(memberBooks)),
+    allRecommendations.map(declinedBooks => JSON.stringify(declinedBooks))
+  );
+  
+  return await _generateContent(prompt);
 }
