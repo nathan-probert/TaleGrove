@@ -67,7 +67,7 @@ export default function FriendsPage() {
       setGroups((prev) => [...prev, group]);
       setNewGroupName('');
       // Navigate to the newly created group's page
-      router.push(`/friends/${group.id}`);
+      router.push(`/groups/${group.id}`);
     } catch (err) {
       console.error('Error creating group:', err);
       alert('Failed to create group.');
@@ -103,31 +103,31 @@ export default function FriendsPage() {
 
   // Navigate to the selected group's page
   const handleSelectGroup = (groupId: string) => {
-    router.push(`/friends/${groupId}`);
+    router.push(`/groups/${groupId}`);
   };
 
-  if (isLoading) return <div className="p-6">Loading...</div>;
-  if (error) return <div className="p-6 text-red-500">Error: {error}</div>;
+  if (isLoading) return <div className="flex justify-center items-center min-h-screen bg-background text-foreground"><div className="loader">Loading...</div></div>;
+  if (error) return <div className="p-6 text-center text-red-500 bg-red-100 rounded-md shadow-md">Error: {error}</div>;
 
   return (
-    <div className="p-6 space-y-8">
-      <h1 className="text-2xl font-bold">Friends & Groups</h1>
+    <div className="container mx-auto p-4 sm:p-6 lg:p-8 max-w-4xl bg-background text-foreground">
+      <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-8 text-center">Friends & Groups</h1>
 
       {/* Create Group */}
-      <div>
-        <h2 className="text-xl font-semibold mb-2">Create a New Group</h2>
-        <div className="flex items-center gap-2">
+      <div className="mb-10 p-6 bg-secondary rounded-xl shadow-lg">
+        <h2 className="text-2xl font-semibold text-foreground mb-4">Create a New Group</h2>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <input
             type="text"
-            placeholder="Group name"
+            placeholder="Enter group name"
             value={newGroupName}
             onChange={(e) => setNewGroupName(e.target.value)}
-            className="border px-2 py-1 rounded text-black flex-grow"
+            className="border border-grey3 bg-background text-foreground px-4 py-2 rounded-lg focus:ring-2 focus:ring-link focus:border-transparent flex-grow shadow-sm"
           />
           <button
             onClick={handleCreateGroup}
             disabled={!newGroupName.trim()}
-            className="bg-blue-600 text-white px-4 py-1 rounded disabled:opacity-50"
+            className="bg-primary hover:opacity-80 text-white px-6 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-link focus:ring-opacity-50"
           >
             Create & Open
           </button>
@@ -136,24 +136,28 @@ export default function FriendsPage() {
 
       {/* Invitations */}
       {invitations.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Pending Invitations</h2>
-          <ul className="space-y-2">
+        <div className="mb-10 p-6 bg-secondary rounded-xl shadow-lg">
+          <h2 className="text-2xl font-semibold text-foreground mb-4">Pending Invitations</h2>
+          <ul className="space-y-3">
             {invitations.map((invite) => (
-              <li key={invite.group_id} className="flex items-center gap-2 p-2 border rounded bg-gray-50">
-                <span className="flex-grow text-black">Join group: <strong>{invite.group_name || 'Unnamed Group'}</strong>?</span>
-                <button
-                  onClick={() => handleAcceptInvite(invite.group_id, invite.group_name)}
-                  className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
-                >
-                  Accept
-                </button>
-                <button
-                  onClick={() => handleRejectInvite(invite.group_id)}
-                  className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600"
-                >
-                  Reject
-                </button>
+              <li key={invite.group_id} className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border border-grey2 rounded-lg bg-grey5 hover:shadow-md transition-shadow duration-150">
+                <span className="flex-grow text-foreground text-center sm:text-left">
+                  Join group: <strong className="font-medium text-link">{invite.group_name || 'Unnamed Group'}</strong>?
+                </span>
+                <div className="flex gap-2 mt-2 sm:mt-0">
+                  <button
+                    onClick={() => handleAcceptInvite(invite.group_id, invite.group_name)}
+                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-150 ease-in-out shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    onClick={() => handleRejectInvite(invite.group_id)}
+                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-150 ease-in-out shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+                  >
+                    Reject
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -161,15 +165,15 @@ export default function FriendsPage() {
       )}
 
       {/* Group List */}
-      <div>
-        <h2 className="text-xl font-semibold mb-2">Your Groups</h2>
+      <div className="p-6 bg-secondary rounded-xl shadow-lg">
+        <h2 className="text-2xl font-semibold text-foreground mb-4">Your Groups</h2>
         {groups.length > 0 ? (
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {groups.map((group) => (
               <li key={group.id}>
                 <button
-                  className="w-full text-left px-4 py-2 rounded bg-gray-100 hover:bg-blue-100 text-black"
-                  onClick={() => handleSelectGroup(group.id ?? "")} // Use router push
+                  className="w-full text-left px-5 py-3 rounded-lg bg-grey5 hover:bg-grey4 text-foreground hover:text-link transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-link focus:ring-opacity-50 shadow-sm hover:shadow-md"
+                  onClick={() => handleSelectGroup(group.id ?? "")}
                 >
                   {group.name}
                 </button>
@@ -177,7 +181,7 @@ export default function FriendsPage() {
             ))}
           </ul>
         ) : (
-          <p className="text-gray-500">You are not a member of any groups yet. Create one or accept an invitation!</p>
+          <p className="text-grey italic text-center py-4">You are not a member of any groups yet. Create one or accept an invitation!</p>
         )}
       </div>
 

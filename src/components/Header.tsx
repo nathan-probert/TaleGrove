@@ -48,8 +48,8 @@ export default function Header() {
               <NavLink href="/discover" icon={<Lightbulb size={20} />} active={pathname?.startsWith('/discover')}>
                 Discover
               </NavLink>
-              <NavLink href="/friends" icon={<Users size={20} />} active={pathname?.startsWith('/friends')}>
-                Friends
+              <NavLink href="/groups" icon={<Users size={20} />} active={pathname?.startsWith('/group')}>
+                Groups
               </NavLink>
             </nav>
 

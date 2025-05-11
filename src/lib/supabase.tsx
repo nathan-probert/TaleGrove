@@ -1,5 +1,5 @@
 import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs';
-import { Book, Folder, BookStatus, UserBookData, BookRecommendation, GroupMember, GroupRole, Group, GroupMemberWithProfile } from '@/types';
+import { Book, Folder, BookStatus, UserBookData, BookRecommendation, GroupMember, GroupRole, Group, GroupMemberWithProfile, RecommendationStatus } from '@/types';
 import { UserResponse } from '@supabase/supabase-js';
 
 const supabase = createPagesBrowserClient({
@@ -357,23 +357,42 @@ export async function getUsersBooks(userId: string, yearsToCheck: number = Infin
 
 export async function saveRecommendation(
   userId: string,
-  recommendation: BookRecommendation
+  recommendation: BookRecommendation,
+  status: RecommendationStatus
 ) {
-  const insertData = {
-    title: recommendation.title,
-    author: recommendation.author,
-    user_id: userId,
-  };
+  if (status === RecommendationStatus.Accepted) {
+    const { error } = await supabase
+      .from('book_recommendations')
+      .delete()
+      .eq('user_id', userId)
+      .eq('title', recommendation.title)
+      .eq('author', recommendation.author);
 
-  const { error } = await supabase
-    .from('book_recommendations')
-    .upsert(insertData)
-    .select()
-    .single();
+    if (error) throw error;
+    return true;
+  } else if (status === RecommendationStatus.Rejected || status === RecommendationStatus.Pending) {
+    const insertData = {
+      title: recommendation.title,
+      author: recommendation.author,
+      user_id: userId,
+      status,
+    };
 
-  if (error) throw error;
-  return true;
+    console.log('Inserting recommendation:', insertData);
+
+    const { error } = await supabase
+      .from('book_recommendations')
+      .upsert(insertData, { onConflict: 'user_id,title,author' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return true;
+  }
+
+  throw new Error(`Unhandled recommendation status: ${status}`);
 }
+
 
 export async function getRecommendations(userId: string) {
   const { data, error } = await supabase
@@ -539,7 +558,6 @@ export async function fetchGroups(userId: string): Promise<Group[]> {
   return data.map((entry) => entry.group as unknown as Group);
 }
 
-
 export async function createGroup(name: string, userId: string): Promise<Group> {
   const { data: group, error } = await supabase
     .from('groups')
@@ -647,3 +665,99 @@ export async function kickGroupMember(groupId: string, memberUserIdToKick: strin
 
   return true; // Kicked successfully
 }
+
+export async function saveGroupBookRecommendation(
+  userId: string,
+  groupId: string,
+  recommendation: BookRecommendation,
+  status: RecommendationStatus
+) {
+  // Fetch all group member user IDs
+  const members = await fetchGroupMembers(groupId);
+  const userIds = members.map(member => member.user_id);
+
+  // Check if the recommendation already exists
+  const { data: existing, error: fetchError } = await supabase
+    .from('group_book_recommendations')
+    .select('id, status')
+    .eq('group_id', groupId)
+    .eq('title', recommendation.title)
+    .eq('author', recommendation.author)
+    .maybeSingle();
+
+  // CASE 1: status is 'pending' → create with all members pending
+  if (status === 'pending' && !existing) {
+    const allPendingStatus: Record<string, RecommendationStatus> = {};
+    userIds.forEach(id => {
+      allPendingStatus[id] = RecommendationStatus.Pending;
+    });
+
+    const { error: insertError } = await supabase
+      .from('group_book_recommendations')
+      .insert({
+        group_id: groupId,
+        title: recommendation.title,
+        author: recommendation.author,
+        status: allPendingStatus,
+      });
+
+    if (insertError) throw insertError;
+    return true;
+  }
+
+  // CASE 2: status is 'rejected' → delete entry
+  if (status === 'rejected' && existing) {
+    const { error: deleteError } = await supabase
+      .from('group_book_recommendations')
+      .delete()
+      .eq('id', existing.id);
+
+    if (deleteError) throw deleteError;
+
+    // Don't recommend this book to the user
+    saveRecommendation(userId, recommendation, RecommendationStatus.Rejected);
+
+    return true;
+  }
+
+  // CASE 3: status is 'accepted' → update or create with user status
+  if (status === 'accepted') {
+    const updatedStatus = {
+      ...(existing?.status ?? {}),
+      [userId]: 'accepted',
+    };
+
+    const insertData = {
+      group_id: groupId,
+      title: recommendation.title,
+      author: recommendation.author,
+      status: updatedStatus,
+      ...(existing?.id && { id: existing.id }),
+    };
+
+    const { error: upsertError } = await supabase
+      .from('group_book_recommendations')
+      .upsert(insertData, { onConflict: 'group_id,title,author' })
+      .select()
+      .single();
+
+    if (upsertError) throw upsertError;
+    return true;
+  }
+
+  return false; 
+}
+
+
+export async function getGroupRecommendations(userId: string, groupId: string) {
+  const { data, error } = await supabase
+    .from('group_book_recommendations')
+    .select('title, author, status')
+    .eq('group_id', groupId)
+    .contains('status', { [userId]: 'pending' });
+
+  if (error) throw error;
+
+  return data as (BookRecommendation & { status: Record<string, RecommendationStatus> })[];
+}
+

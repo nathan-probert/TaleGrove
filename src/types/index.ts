@@ -139,3 +139,9 @@ export enum GroupRole {
   Member = 'member',
   Invited = 'invited',
 }
+
+export enum RecommendationStatus {
+  Pending = 'pending',
+  Rejected = 'rejected',
+  Accepted = 'accepted',
+}

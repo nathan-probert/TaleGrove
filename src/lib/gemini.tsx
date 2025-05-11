@@ -38,7 +38,8 @@ function _createPrompt(userData: string, recommendationData: string): string {
 
 function _createGroupPrompt(
   allMemberBooksData: string[],
-  allRecommendationsData: string[]
+  allRecommendationsData: string[],
+  oldGroupRecommendations: string
 ): string {
   let prompt = `You are a highly intelligent book recommendation engine specializing in group recommendations.
 
@@ -67,8 +68,12 @@ function _createGroupPrompt(
   "DeclinedGroupRecommendations": ${allRecommendationsData[i]}
 
   `;
+
+  prompt += `Old Group Recommendations (Do NOT repeat): ${oldGroupRecommendations}
+  `;
   }
 
+  console.log("Prompt for group recommendations:", prompt);
   return prompt;
 }
 
@@ -141,11 +146,13 @@ export async function generateRecommendations(userData: BookRecommendation[], ol
 
 export async function generateGroupRecommendations(
   allMemberBooks: BookRecommendation[][],
-  allRecommendations: BookRecommendation[][]
+  allRecommendations: BookRecommendation[][],
+  oldGroupRecommendations: BookRecommendation[]
 ): Promise<BookRecommendation[]> {
   const prompt = _createGroupPrompt(
     allMemberBooks.map(memberBooks => JSON.stringify(memberBooks)),
-    allRecommendations.map(declinedBooks => JSON.stringify(declinedBooks))
+    allRecommendations.map(declinedBooks => JSON.stringify(declinedBooks)),
+    JSON.stringify(oldGroupRecommendations)
   );
   
   return await _generateContent(prompt);
