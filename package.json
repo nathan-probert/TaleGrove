@@ -23,7 +23,6 @@
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.5.0",
-    "supabase": "^2.20.12",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.19.3",
@@ -38,6 +37,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.3.0",
     "postcss": "^8.5.3",
+    "supabase": "^2.31.8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }

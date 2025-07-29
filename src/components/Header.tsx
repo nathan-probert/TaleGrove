@@ -31,8 +31,15 @@ export default function Header() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row items-center justify-between py-4">
           <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-            <span className="text-2xl">📚</span>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            <img
+              src="/images/colour_logo.png"
+              alt="TaleGrove Logo"
+              width={36}
+              height={36}
+              className="object-contain dark:invert"
+              style={{ maxHeight: 36 }}
+            />
+            <h1 className="text-2xl font-bold text-primary">
               TaleGrove
             </h1>
           </Link>
