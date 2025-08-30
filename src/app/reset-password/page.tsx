@@ -142,7 +142,7 @@ export default function ResetPassword() {
                             <button
                                 type="submit"
                                 disabled={loading || success}
-                                className="w-full py-2.5 px-6 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                                className="w-full py-2.5 px-6 rounded-lg bg-primary text-white font-medium hover:bg-primary/90  flex items-center justify-center gap-2 disabled:opacity-50"
                             >
                                 {loading ? (
                                     <>

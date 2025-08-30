@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useRouter } from 'next/navigation';
 import { Book, BookStatus, Folder, BookFromAPI } from "@/types";
 import { getUserId, getUserFolders, addBook, addBookToFolders } from "@/lib/supabase";
 import { AddBookModal } from "./Modals/AddBookModal";
@@ -23,6 +24,7 @@ export default function BookNotInCollection({ book, item, onBack, reload }: Book
   
   const [isLoadingFolders, setIsLoadingFolders] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const router = useRouter();
 
   const addBookToAllFolders = async (
     book: Book,
@@ -45,9 +47,7 @@ export default function BookNotInCollection({ book, item, onBack, reload }: Book
 
     // Add book to folder
     const data = await addBook(bookDataWithDetails as Book);
-    await addBookToFolders(data.id, folderIds, book.user_id);
-
-    reload()
+  await addBookToFolders(data.id, folderIds, book.user_id);
   }
 
   // Fetch folders on mount
@@ -131,6 +131,9 @@ export default function BookNotInCollection({ book, item, onBack, reload }: Book
     try {
       await addBookToAllFolders(book, selectedFolderIds, selectedStatus, rating, notes, dateRead);
       setIsModalOpen(false);
+
+      console.log("Pushing books to router");
+      router.push('/books');
     } catch (error) {
       console.error("Error adding book:", error);
       alert(`Failed to add book: ${error instanceof Error ? error.message : 'Unknown error'}`);

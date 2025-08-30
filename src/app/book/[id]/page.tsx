@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { getUserId, checkIfBookInCollection } from '@/lib/supabase';
 import BookInCollection from '@/components/BookInCollection';
 import BookNotInCollection from '@/components/BookNotInCollection';
@@ -12,6 +12,7 @@ import { Loader2 } from 'lucide-react';
 export default function BookDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = params?.id as string;
   const [book, setBook] = useState<Book>();
   const [item, setItem] = useState<BookFromAPI>();
@@ -55,9 +56,16 @@ export default function BookDetailPage() {
     if (id) fetchBook();
   }, [id]);
 
+
   // Components can't use router, so pass these down
   const handleBack = () => {
-    router.back();
+    // If there is a search query, go back to search page with query param
+    const q = searchParams?.get('q');
+    if (q) {
+      router.push(`/search?q=${encodeURIComponent(q)}`);
+    } else {
+      router.back();
+    }
   };
 
   const reload = () => {

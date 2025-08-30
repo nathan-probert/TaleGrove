@@ -4,7 +4,7 @@
 import { Book } from '@/types';
 import Card from '../Card';
 
-export default function BookCard({ book, folderId, parentFolderId, refresh }: { book: Book, folderId: string | null, parentFolderId: string | null, refresh: () => void }) {
+export default function BookCard({ book, folderId, parentFolderId, refresh }: { book: Book, folderId: string | null, parentFolderId: string | null, refresh?: (hideId?: string) => void }) {
     return (
         <Card 
         book={book}

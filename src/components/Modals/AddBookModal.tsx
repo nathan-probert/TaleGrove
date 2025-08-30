@@ -100,7 +100,7 @@ export const AddBookModal = ({
                         {folders.map((folder) => (
                             <label
                                 key={folder.id}
-                                className="flex items-center gap-4 p-3 hover:bg-grey3 rounded-lg cursor-pointer transition-colors"
+                                className="flex items-center gap-4 p-3 hover:bg-grey3 rounded-lg cursor-pointer "
                             >
                                 <input
                                     type="checkbox"

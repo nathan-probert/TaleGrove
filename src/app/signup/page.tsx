@@ -1,10 +1,13 @@
-'use client';
 
+'use client';
 import { useState } from 'react';
 import { createRootFolder, signUpWithEmail, } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+
+const logo_light = '/images/logo_dark.png';
+const logo_dark = '/images/logo_light.png';
 
 export default function SignUp() {
     const [email, setEmail] = useState('');
@@ -52,13 +55,23 @@ export default function SignUp() {
 
                     {/* Logo Container */}
                     <div className="transition-transform hover:scale-105">
+                        {/* Light theme logo */}
                         <Image
-                            src="/images/colour_logo.png"
+                            src={logo_light}
                             alt="TaleGrove Logo"
                             width={150}
                             height={150}
-                            className="dark:invert"
                             priority
+                            className="block dark:hidden"
+                        />
+                        {/* Dark theme logo */}
+                        <Image
+                            src={logo_dark}
+                            alt="TaleGrove Logo (Dark)"
+                            width={100}
+                            height={100}
+                            priority
+                            className="hidden dark:block"
                         />
                     </div>
 
@@ -176,7 +189,7 @@ export default function SignUp() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full py-2.5 px-6 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                                className="w-full py-2.5 px-6 rounded-lg bg-primary text-white font-medium hover:bg-primary/90  flex items-center justify-center gap-2 disabled:opacity-50"
                             >
                                 {loading ? (
                                     <>

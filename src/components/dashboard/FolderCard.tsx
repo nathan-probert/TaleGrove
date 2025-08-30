@@ -10,11 +10,11 @@ import { useEffect, useState } from 'react';
 interface FolderCardProps {
   folder: Folder;
   onFolderClick?: (folderId: string, name: string) => void;
-  refresh: () => void;
+  onRefresh?: (hideId?: string) => void;
 }
 
 
-export default function FolderCard({ folder, onFolderClick, refresh }: FolderCardProps) {
+export default function FolderCard({ folder, onFolderClick, onRefresh }: FolderCardProps) {
   const [books, setBooks] = useState<Book[]>([]);
 
   useEffect(() => {
@@ -36,7 +36,8 @@ export default function FolderCard({ folder, onFolderClick, refresh }: FolderCar
 
   const [{ isOver }, drop] = useDrop(() => ({
     accept: ['book', 'folder'],
-    drop: (item: any, monitor) => { // Use 'any' or a more specific union type for item
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  drop: (item: any, monitor) => { // Use 'any' or a more specific union type for item
       const itemType = monitor.getItemType();
       const draggedItemUserId = item.info?.user_id ?? item.user_id; // Handle potential differences in item structure
 
@@ -50,13 +51,14 @@ export default function FolderCard({ folder, onFolderClick, refresh }: FolderCar
         const bookId = item.id;
         const sourceFolderId = item.folderId; // Assuming folderId is part of the book item
         addBookToFolder(bookId, sourceFolderId, folder.id, draggedItemUserId).then(() => {
-          refresh();
+          // Inform parent to hide the dragged item while refreshing
+          onRefresh?.(bookId);
         });
       } else if (itemType === 'folder') {
         // Ensure item.id is correctly passed for folders
         const folderId = item.id;
         addFolderToFolder(folderId, folder.id, draggedItemUserId).then(() => {
-          refresh();
+          onRefresh?.(folderId);
         });
       }
     },

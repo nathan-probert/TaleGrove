@@ -6,6 +6,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { resetPasswordForEmail } from '@/lib/supabase';
 
+const logo_light = '/images/logo_dark.png';
+const logo_dark = '/images/logo_light.png';
+
 export default function ForgotPassword() {
     const [email, setEmail] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -35,13 +38,23 @@ export default function ForgotPassword() {
                 <div className="flex flex-col items-center space-y-6">
                     {/* Logo Container */}
                     <div className="transition-transform hover:scale-105">
+                        {/* Light theme logo */}
                         <Image
-                            src="/images/colour_logo.png"
+                            src={logo_light}
                             alt="TaleGrove Logo"
                             width={150}
                             height={150}
-                            className="dark:invert"
                             priority
+                            className="block dark:hidden"
+                        />
+                        {/* Dark theme logo */}
+                        <Image
+                            src={logo_dark}
+                            alt="TaleGrove Logo (Dark)"
+                            width={100}
+                            height={100}
+                            priority
+                            className="hidden dark:block"
                         />
                     </div>
 
@@ -92,7 +105,7 @@ export default function ForgotPassword() {
                             <button
                                 type="submit"
                                 disabled={loading || success}
-                                className="w-full py-2.5 px-6 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                                className="w-full py-2.5 px-6 rounded-lg bg-primary text-white font-medium hover:bg-primary/90  flex items-center justify-center gap-2 disabled:opacity-50"
                             >
                                 {loading ? (
                                     <>

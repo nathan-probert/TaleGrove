@@ -11,12 +11,12 @@ interface Props {
   folderId: string | null;
   parentFolderId?: string | null;
   parentFolderSlug?: string | null;
-  refresh: () => void;
+  onRefresh: (hideId?: string) => void;
   breadcrumbs?: { id: string | null; name: string; slug: string | null }[];
   isRoot: boolean;
 }
 
-export default function BookList({ items, onFolderClick, folderId, parentFolderId, parentFolderSlug, refresh, breadcrumbs = [], isRoot }: Props) {
+export default function BookList({ items, onFolderClick, folderId, parentFolderId, parentFolderSlug, onRefresh, breadcrumbs = [], isRoot }: Props) {
   const parentCrumb = breadcrumbs[breadcrumbs.length - 2];
 
   const goUpFolder: Folder & { isFolder: true } = {
@@ -50,17 +50,13 @@ export default function BookList({ items, onFolderClick, folderId, parentFolderI
                   onFolderClick(id);
                 }
               }}
-              refresh={() => {
-                if (folder.id === '__go_up__' && parentCrumb) {
-                  refresh();
-                } else {
-                  refresh();
-                }
-              }}
+                          onRefresh={(hideId?: string) => {
+                            onRefresh(hideId);
+                          }}
             />
           );
         } else {
-          return <BookCard key={item.id} book={item} refresh={refresh} folderId={folderId} parentFolderId={parentFolderId ?? null} />;
+          return <BookCard key={item.id} book={item} refresh={onRefresh} folderId={folderId} parentFolderId={parentFolderId ?? null} />;
         }
       })}
     </div>

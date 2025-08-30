@@ -6,7 +6,11 @@ import { useRouter } from 'next/navigation';
 import { AuthError } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
+
 import Image from 'next/image';
+
+const logo_light = '/images/logo_dark.png';
+const logo_dark = '/images/logo_light.png';
 
 const getFriendlyErrorMessage = (error: AuthError | null): string | null => {
     if (!error) return null;
@@ -56,13 +60,23 @@ export default function SignIn() {
 
                     {/* Logo Container */}
                     <div className="transition-transform hover:scale-105">
+                        {/* Light theme logo */}
                         <Image
-                            src="/images/colour_logo.png"
+                            src={logo_light}
                             alt="TaleGrove Logo"
                             width={100}
                             height={100}
-                            className="dark:invert"
                             priority
+                            className="block dark:hidden"
+                        />
+                        {/* Dark theme logo */}
+                        <Image
+                            src={logo_dark}
+                            alt="TaleGrove Logo (Dark)"
+                            width={100}
+                            height={100}
+                            priority
+                            className="hidden dark:block"
                         />
                     </div>
 
@@ -122,7 +136,7 @@ export default function SignIn() {
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-3 p-1.5 rounded-lg hover:bg-grey5"
+                                className="absolute right-3 top-2 p-1.5 rounded-lg hover:bg-grey5"
                             >
                                 {showPassword ? (
                                     <svg className="w-6 h-6 text-grey2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -176,7 +190,7 @@ export default function SignIn() {
                     <div className="grid grid-cols-1 gap-3 mt-6">
                         <button
                             type="button"
-                            className="flex items-center justify-center py-2.5 px-4 border border-grey4 rounded-lg hover:bg-grey5 transition-colors text-foreground"
+                            className="flex items-center justify-center py-2.5 px-4 border border-grey4 rounded-lg hover:bg-grey5  text-foreground"
                             onClick={() => signInWithGoogle()}
                         >
                             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">

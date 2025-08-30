@@ -112,6 +112,7 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
       if (remainingFolders.length === 0) {
         await deleteBook(book.id ?? "", userId);
       }
+      router.push('/books');
     } catch (error) {
       console.error("Error removing book:", error);
       alert(`Failed to remove book: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -119,8 +120,6 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
       setIsRemoving(false);
       setIsModalOpen(false);
     }
-
-    reload();
   };
 
   const handleChangeCover = () => {
@@ -134,7 +133,7 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
         <div className="flex items-center justify-between mb-8">
           <button
             onClick={onBack}
-            className="flex items-center text-grey2 hover:text-primary transition-colors"
+            className="flex items-center text-grey2 hover:text-primary "
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
             Back
@@ -153,7 +152,7 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
             />
             <button
               onClick={handleChangeCover}
-              className="w-48 px-4 py-2 bg-secondary hover:bg-secondary/90 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-sm"
+              className="w-48 px-4 py-2 bg-secondary hover:bg-secondary/90 text-white rounded-lg font-medium  flex items-center justify-center gap-2 text-sm"
             >
               <ImageIcon className="w-4 h-4" />
               Change Cover
@@ -216,7 +215,7 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
             {/* Remove Button */}
             <button
               onClick={() => setIsModalOpen(true)}
-              className="w-full lg:w-auto px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              className="w-full lg:w-auto px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium  flex items-center justify-center gap-2"
             >
               <Trash2 className="w-5 h-5" />
               Remove from Collection

@@ -50,7 +50,7 @@ export const RemoveBookModal = ({
             {folders.map((folder) => (
                 <label
                     key={folder.id}
-                    className="flex items-center p-3 rounded-lg hover:bg-grey5 transition-colors cursor-pointer"
+                    className="flex items-center p-3 rounded-lg hover:bg-grey5  cursor-pointer"
                 >
                     <input
                         type="checkbox"

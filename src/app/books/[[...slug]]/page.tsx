@@ -20,6 +20,7 @@ export default function Books() {
     const [userId, setUserId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [isDeleting, setIsDeleting] = useState<boolean>(false); // State for delete operation
+    const [hiddenItemIds, setHiddenItemIds] = useState<string[]>([]);
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
     const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null, name: string, slug: string | null }[]>([
         { id: null, name: 'Home', slug: null }
@@ -65,8 +66,8 @@ export default function Books() {
         return { folderId: parentId, breadcrumbs: crumbs };
     }, [parentFolderId]);
 
-    const fetchData = useCallback(async (userId: string, slugPath: string[]) => {
-        setIsLoading(true);
+    const fetchData = useCallback(async (userId: string, slugPath: string[], suppressLoading = false) => {
+        if (!suppressLoading) setIsLoading(true);
         try {
             let { folderId, breadcrumbs: resolvedBreadcrumbs } = await resolveFolderPath(userId, slugPath);
 
@@ -77,12 +78,13 @@ export default function Books() {
                 return;
             }
 
-            // Handle root
-            setIsRoot(false);
+            // Handle root: determine root status after resolving folderId to avoid transient state
             if (folderId === null && slugPath.length === 0) {
                 folderId = await getRootId(userId);
                 setIsRoot(true);
                 resolvedBreadcrumbs = [{ id: null, name: 'Home', slug: null }];
+            } else {
+                setIsRoot(false);
             }
 
             setCurrentFolderId(folderId);
@@ -96,7 +98,7 @@ export default function Books() {
             console.error('Error loading data:', error);
             router.push('/books');
         } finally {
-            setIsLoading(false);
+            if (!suppressLoading) setIsLoading(false);
         }
     }, [router, resolveFolderPath]);
 
@@ -186,8 +188,8 @@ export default function Books() {
         const confirmation = window.confirm(`Are you sure you want to delete "${currentFolderName}" and all its contents? This action cannot be undone.`);
         if (!confirmation) return;
 
-        setIsDeleting(true);
-        setIsLoading(true);
+    setIsDeleting(true);
+    setIsLoading(true);
         try {
             await deleteFolder(currentFolderId, userId);
             const parentCrumb = breadcrumbs[breadcrumbs.length - 2];
@@ -202,6 +204,18 @@ export default function Books() {
         } finally {
             setIsDeleting(false);
             setIsLoading(false);
+        }
+    };
+
+    // Refresh while optionally hiding a single item (used for drag/drop)
+    const refreshAndHide = async (hideId?: string) => {
+        if (!userId) return;
+        if (hideId) setHiddenItemIds((s) => Array.from(new Set([...s, hideId])));
+        try {
+            await fetchData(userId, slugArray, true);
+        } finally {
+            // Clear hidden IDs after refresh completes
+            setHiddenItemIds([]);
         }
     };
 
@@ -247,7 +261,7 @@ export default function Books() {
                                                 onClick={() => handleBreadcrumbClick(crumb)}
                                                 className={`text-sm font-medium ${index === breadcrumbs.length - 1
                                                     ? 'text-foreground cursor-default'
-                                                    : 'text-grey2 hover:text-primary transition-colors'
+                                                    : 'text-grey2 hover:text-primary '
                                                     }`}
                                                 disabled={index === breadcrumbs.length - 1}
                                             >
@@ -265,7 +279,7 @@ export default function Books() {
                         <button
                             onClick={handleDeleteFolder}
                             disabled={isLoading || isDeleting}
-                            className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
+                            className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 "
                             title={`Delete folder: ${breadcrumbs[breadcrumbs.length - 1]?.name}`}
                         >
                             {isDeleting ? (
@@ -288,7 +302,7 @@ export default function Books() {
                     <button
                         onClick={handleCreateFolder}
                         disabled={isLoading || isDeleting || !currentFolderId}
-                        className="inline-flex items-center px-4 py-2 rounded-md shadow-sm text-sm font-medium text-foreground bg-primary hover:scale-105 transition-transform duration-200 ease-in-out">
+                        className="inline-flex items-center px-4 py-2 rounded-md shadow-sm text-lg font-medium text-foreground bg-primary duration-200 ease-in-out cursor-pointer transform hover:scale-105 transition-transform will-change-transform">
                         {isLoading && !isDeleting ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -301,7 +315,7 @@ export default function Books() {
 
                     <Link
                         href="/search"
-                        className="inline-flex items-center px-6 py-3 rounded-md shadow-sm text-base font-medium text-foreground bg-secondary hover:scale-105 transition-transform duration-200 ease-in-out transform-gpu">
+                        className="inline-flex items-center px-6 py-3 rounded-md shadow-sm text-lg font-medium text-foreground bg-secondary duration-200 ease-in-out cursor-pointer transform hover:scale-105 transition-transform will-change-transform">
                         Search for Books
                     </Link>
                 </div>
@@ -316,7 +330,7 @@ export default function Books() {
                         <div className="text-3xl font-bold mb-4">Add some books to your collection to get started!</div>
                         <Link
                             href="/search"
-                            className="mt-2 inline-block px-6 py-3 rounded-md shadow-sm text-lg font-semibold leading-none text-foreground bg-primary hover:bg-primary/80 transition-colors duration-200 ease-in-out cursor-pointer transform hover:scale-105 transition-transform will-change-transform"
+                            className="mt-2 inline-block px-6 py-3 rounded-md shadow-sm text-lg leading-none text-foreground bg-primary hover:bg-primary/80  duration-200 ease-in-out cursor-pointer transform hover:scale-105 transition-transform will-change-transform"
                         >
                             <span className="block">Get Started!</span>
                         </Link>
@@ -324,13 +338,16 @@ export default function Books() {
                 ) : (
                     <div className="space-y-6">
                         <div className="space-y-4">
+                            {
+                                // Hide any items that are currently being hidden during a drag/drop refresh
+                            }
                             <BookList
-                                items={books}
+                                items={books.filter((b) => !hiddenItemIds.includes(b.id))}
                                 onFolderClick={handleFolderClick}
                                 folderId={currentFolderId}
                                 parentFolderId={parentFolderId}
                                 parentFolderSlug={breadcrumbs.length > 1 ? breadcrumbs[breadcrumbs.length - 2].slug : null}
-                                refresh={() => userId && fetchData(userId, slugArray)}
+                                onRefresh={(hideId?: string) => refreshAndHide(hideId)}
                                 isRoot={isRoot}
                             />
                         </div>

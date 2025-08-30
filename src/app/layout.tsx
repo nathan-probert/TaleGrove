@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           }}
         />
       </head>
-      <body className="min-h-screen bg-background text-foreground antialiased transition-colors duration-200">
+      <body className="min-h-screen bg-background text-foreground antialiased  duration-200">
         <ThemeProvider>
           <LayoutShell>{children}</LayoutShell>
         </ThemeProvider>

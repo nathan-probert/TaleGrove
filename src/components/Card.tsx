@@ -12,7 +12,7 @@ interface CardProps {
   book: Book;
   folderId?: string | null;
   parentFolderId?: string | null;
-  refresh?: () => void;
+  refresh?: (hideId?: string) => void;
   isDraggable?: boolean;
   isSearch?: boolean;
 }
@@ -20,7 +20,7 @@ interface CardProps {
 interface DnDWrapperProps {
   book: Book;
   effectiveFolderId?: string | null;
-  refresh?: () => void;
+  refresh?: (hideId?: string) => void;
   handleClick: () => void;
   isSearch?: boolean;
 }
@@ -53,7 +53,7 @@ const WithDnD = (Component: ComponentType<DnDWrapperProps>) => {
 
     const [{ isOver }, drop] = useDrop({
       accept: 'book',
-      drop: (draggedItem: DraggedItemType) => {
+    drop: (draggedItem: DraggedItemType) => {
         if (draggedItem.id !== props.book.id && 
             draggedItem.folderId === props.effectiveFolderId) {
           reorderBookInFolder(
@@ -62,7 +62,7 @@ const WithDnD = (Component: ComponentType<DnDWrapperProps>) => {
             props.effectiveFolderId,
             props.book.user_id
           ).then(() => {
-            props.refresh?.();
+      props.refresh?.(draggedItem.id);
           });
         }
       },
@@ -122,25 +122,28 @@ function BaseCard({
           )}
         </div>
 
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
-            {book.title}
+  <div className="flex-1 flex flex-col">
+          <h3
+            className="text-lg font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary "
+            title={book.title}
+          >
+            {(book.title ?? '').length > 50 ? `${(book.title ?? '').slice(0, 50)}…` : book.title}
           </h3>
-          <p className="text-sm text-grey2 line-clamp-1">
+          <p className="text-sm text-grey2 line-clamp-1 mb-2">
             {book.author || 'Unknown Author'}
           </p>
 
           {!isSearch && (
-            <div className="flex items-center gap-2 mt-3">
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                book.status === "completed" ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+            <div className="flex items-center gap-3 mt-auto">
+              <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm md:text-base font-medium ${
+                book.status === "completed" ? 'bg-green-700 text-white' : 'bg-blue-100 text-blue-800'
               }`}>
                 {book.status}
               </span>
               {book.rating && (
-                <div className="flex items-center text-sm text-grey2">
-                  <Star className="w-4 h-4 mr-1 text-yellow-500 fill-current" />
-                  <span>{book.rating}/10</span>
+                <div className="flex items-center text-base md:text-lg text-grey2">
+                  <Star className="w-5 h-5 mr-2 text-yellow-500 fill-current" />
+                  <span className="font-medium">{book.rating}/10</span>
                 </div>
               )}
             </div>

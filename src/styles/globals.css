@@ -23,10 +23,10 @@ body {
 }
 
 :root[class="dark"] {
-  --fg: #FFFFFF;
+  --fg: #ffffff;
   --bg: #141720;
   --primary: #00883f;
-  --secondary: #a89f91;
+  --secondary: #79736b;
   --grey: #9c9c9c;
   --grey2: #b2becd;
   --grey3: #212531;
