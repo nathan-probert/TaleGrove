@@ -6,8 +6,8 @@ import { Book, Search, Lightbulb, Moon, Sun } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-const logo_light = '/images/logo_dark.png';
-const logo_dark = '/images/logo_light.png';
+const logo_light = "/images/logo_dark.png";
+const logo_dark = "/images/logo_light.png";
 
 export default function Header() {
   const pathname = usePathname();
@@ -17,15 +17,15 @@ export default function Header() {
   useEffect(() => {
     setMounted(true);
     // This now matches the server-side calculation
-    const isDark = document.documentElement.classList.contains('dark');
+    const isDark = document.documentElement.classList.contains("dark");
     setDarkMode(isDark);
   }, []);
 
   const toggleTheme = () => {
     const newDarkMode = !darkMode;
     setDarkMode(newDarkMode);
-    localStorage.theme = newDarkMode ? 'dark' : 'light';
-    document.documentElement.classList.toggle('dark', newDarkMode);
+    localStorage.theme = newDarkMode ? "dark" : "light";
+    document.documentElement.classList.toggle("dark", newDarkMode);
   };
 
   if (!mounted) return null;
@@ -34,7 +34,10 @@ export default function Header() {
     <header className="bg-background text-lg sm:text-xl">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row items-center justify-between py-4">
-          <Link href="/" className="flex items-center justify-center gap-4 hover:opacity-80 transition-opacity">
+          <Link
+            href="/"
+            className="flex items-center justify-center gap-4 hover:opacity-80 transition-opacity"
+          >
             {/* Light theme logo */}
             <Image
               src={logo_light}
@@ -60,13 +63,25 @@ export default function Header() {
 
           <div className="flex items-center space-x-6 mt-4 sm:mt-0">
             <nav className="flex items-center space-x-6">
-              <NavLink href="/books" icon={<Book size={26} />} active={pathname?.startsWith('/books')}>
+              <NavLink
+                href="/books"
+                icon={<Book size={26} />}
+                active={pathname?.startsWith("/books")}
+              >
                 My Books
               </NavLink>
-              <NavLink href="/search" icon={<Search size={26} />} active={pathname?.startsWith('/search')}>
+              <NavLink
+                href="/search"
+                icon={<Search size={26} />}
+                active={pathname?.startsWith("/search")}
+              >
                 Search
               </NavLink>
-              <NavLink href="/discover" icon={<Lightbulb size={26} />} active={pathname?.startsWith('/discover')}>
+              <NavLink
+                href="/discover"
+                icon={<Lightbulb size={26} />}
+                active={pathname?.startsWith("/discover")}
+              >
                 Discover
               </NavLink>
             </nav>
@@ -89,20 +104,25 @@ export default function Header() {
   );
 }
 
-
-function NavLink({ href, icon, children, active }: {
-  href: string,
-  icon: React.ReactNode,
-  children: React.ReactNode,
-  active?: boolean
+function NavLink({
+  href,
+  icon,
+  children,
+  active,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  active?: boolean;
 }) {
   return (
     <Link
       href={href}
-      className={`flex items-center space-x-3 px-6 py-3 rounded-xl text-xl  ${active
-          ? 'bg-primary/10 text-primary'
-          : 'hover:bg-muted text-foreground/80 hover:text-foreground'
-        }`}
+      className={`flex items-center space-x-3 px-6 py-3 rounded-xl text-xl  ${
+        active
+          ? "bg-primary/10 text-primary"
+          : "hover:bg-muted text-foreground/80 hover:text-foreground"
+      }`}
     >
       {icon}
       <span className="hidden sm:inline-block font-semibold">{children}</span>

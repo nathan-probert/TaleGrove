@@ -1,14 +1,13 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Book, BookFromAPI, BookStatus } from '@/types';
-import { ResultsGrid } from '@/components/search/ResultsGrid';
-import { getUserId } from '@/lib/supabase';
-import { ArrowLeft, Loader2, SearchIcon } from 'lucide-react';
-import { getCoverUrl, searchForBooks } from '@/lib/books_api';
-
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Book, BookFromAPI, BookStatus } from "@/types";
+import { ResultsGrid } from "@/components/search/ResultsGrid";
+import { getUserId } from "@/lib/supabase";
+import { ArrowLeft, Loader2, SearchIcon } from "lucide-react";
+import { getCoverUrl, searchForBooks } from "@/lib/books_api";
 
 // Function to parse data for books
 const parseBookData = (data: BookFromAPI[], userId: string): Book[] => {
@@ -28,17 +27,16 @@ const parseBookData = (data: BookFromAPI[], userId: string): Book[] => {
       isbn: item.isbn,
       cover_url: getCoverUrl(item.id),
     });
-  };
+  }
 
   return books;
-}
-
+};
 
 export default function SearchBook() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [title, setTitle] = useState('');
-  const [author, setAuthor] = useState('');
+  const [title, setTitle] = useState("");
+  const [author, setAuthor] = useState("");
   const [results, setResults] = useState<Book[]>([]);
   const [loading, setLoading] = useState(false);
   const [madeSearch, setMadeSearch] = useState(false);
@@ -49,8 +47,8 @@ export default function SearchBook() {
     if (!title && !author) return;
     // Update the URL with the current search query
     const params = new URLSearchParams();
-    if (title) params.set('title', title);
-    if (author) params.set('author', author);
+    if (title) params.set("title", title);
+    if (author) params.set("author", author);
     router.replace(`/search?${params.toString()}`);
 
     setLoading(true);
@@ -58,7 +56,7 @@ export default function SearchBook() {
 
     const userId = await getUserId();
     if (!userId) {
-      console.error('User ID not found. Please log in.');
+      console.error("User ID not found. Please log in.");
       setLoading(false);
       return;
     }
@@ -70,29 +68,59 @@ export default function SearchBook() {
       setResults(processedResults);
     } catch (err: unknown) {
       if (err instanceof Error) {
-        console.error('Error fetching from Google Books API:', err.message);
+        console.error("Error fetching from Google Books API:", err.message);
       } else {
-        console.error('An unknown error occurred while fetching from Google Books API:', err);
+        console.error(
+          "An unknown error occurred while fetching from Google Books API:",
+          err,
+        );
       }
-
     } finally {
       setLoading(false);
       setMadeSearch(true);
     }
   };
 
-  // On mount, initialize title/author from URL params
+  // Initialize title/author from URL params and, if present, perform a search with those values
   useEffect(() => {
-    const urlTitle = searchParams?.get('title') || '';
-    const urlAuthor = searchParams?.get('author') || '';
+    const urlTitle = searchParams?.get("title") || "";
+    const urlAuthor = searchParams?.get("author") || "";
     setTitle(urlTitle);
     setAuthor(urlAuthor);
-    // If the page was opened with query params, perform the search once.
+
+    // If the page was opened with query params, perform the search once using those values
     if (urlTitle || urlAuthor) {
-      // call handleSearch to populate results from URL params
-      handleSearch();
+      (async () => {
+        setLoading(true);
+        setResults([]);
+
+        const userId = await getUserId();
+        if (!userId) {
+          console.error("User ID not found. Please log in.");
+          setLoading(false);
+          return;
+        }
+
+        try {
+          const data = await searchForBooks(urlTitle, urlAuthor);
+          const processedResults = parseBookData(data, userId);
+          setResults(processedResults);
+        } catch (err: unknown) {
+          if (err instanceof Error) {
+            console.error("Error fetching from Google Books API:", err.message);
+          } else {
+            console.error(
+              "An unknown error occurred while fetching from Google Books API:",
+              err,
+            );
+          }
+        } finally {
+          setLoading(false);
+          setMadeSearch(true);
+        }
+      })();
     }
-  }, []);
+  }, [searchParams]);
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
@@ -111,13 +139,15 @@ export default function SearchBook() {
             <h1 className="text-3xl font-bold text-foreground">
               Search for a Book
             </h1>
-
           </div>
         </div>
 
         {/* Search Form */}
         <div className="space-y-6">
-          <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4 items-center">
+          <form
+            onSubmit={handleSearch}
+            className="flex flex-col md:flex-row gap-4 items-center"
+          >
             <input
               id="title"
               value={title}
@@ -169,7 +199,8 @@ export default function SearchBook() {
           {!loading && results.length > 0 && madeSearch && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-foreground">
-                {results.length} {results.length === 1 ? 'book found' : 'books found'}
+                {results.length}{" "}
+                {results.length === 1 ? "book found" : "books found"}
               </h2>
               <ResultsGrid results={results} />
             </div>
@@ -177,7 +208,9 @@ export default function SearchBook() {
 
           {!loading && results.length === 0 && !madeSearch && (
             <div className="text-center py-12 rounded-lg border-2 border-dashed border-grey4">
-              <p className="text-foreground/60">Enter a title or author to search for a book.</p>
+              <p className="text-foreground/60">
+                Enter a title or author to search for a book.
+              </p>
             </div>
           )}
 
@@ -186,10 +219,12 @@ export default function SearchBook() {
               <p className="text-foreground/60">
                 {title || author ? (
                   <>
-                    No books found for &quot;<span className="text-primary">{title || author}</span>&quot;.
+                    No books found for &quot;
+                    <span className="text-primary">{title || author}</span>
+                    &quot;.
                   </>
                 ) : (
-                  'No results found. Please try again.'
+                  "No results found. Please try again."
                 )}
               </p>
             </div>

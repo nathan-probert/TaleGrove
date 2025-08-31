@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { Book } from '@/types';
-import SearchBookCard from '@/components/search/SearchBookCard';
+import { motion } from "framer-motion";
+import { Book } from "@/types";
+import SearchBookCard from "@/components/search/SearchBookCard";
 
 const gridVariants = {
   hidden: { opacity: 0 },

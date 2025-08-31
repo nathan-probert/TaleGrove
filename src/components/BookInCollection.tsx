@@ -1,6 +1,13 @@
 import { Book, BookStatus, Folder, BookFromAPI } from "@/types";
-import { getUserId, deleteBook, removeBookFromFolders, getFoldersFromBook, updateBookDetails } from "@/lib/supabase";
+import {
+  getUserId,
+  deleteBook,
+  removeBookFromFolders,
+  getFoldersFromBook,
+  updateBookDetails,
+} from "@/lib/supabase";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { ArrowLeft, Trash2, ImageIcon, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { RemoveBookModal } from "./Modals/RemoveBookModal";
@@ -10,29 +17,38 @@ interface BookInCollectionProps {
   book: Book;
   item: BookFromAPI;
   onBack: () => void;
-  reload: () => void;
 }
 
-export default function BookInCollection({ book, item, onBack, reload }: BookInCollectionProps) {
+export default function BookInCollection({
+  book,
+  item,
+  onBack,
+}: BookInCollectionProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>([]);
   const [isRemoving, setIsRemoving] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editedStatus, setEditedStatus] = useState<BookStatus>(book.status || BookStatus.wishlist);
-  
-  const [editedRating, setEditedRating] = useState<number | null>(book.rating || null);
-  const [editedNotes, setEditedNotes] = useState<string>(book.notes || '');
-  const [editedDateRead, setEditedDateRead] = useState<string>(book.date_read || '');
+  const [editedStatus, setEditedStatus] = useState<BookStatus>(
+    book.status || BookStatus.wishlist,
+  );
+
+  const [editedRating, setEditedRating] = useState<number | null>(
+    book.rating || null,
+  );
+  const [editedNotes, setEditedNotes] = useState<string>(book.notes || "");
+  const [editedDateRead, setEditedDateRead] = useState<string>(
+    book.date_read || "",
+  );
 
   const [isUpdating, setIsUpdating] = useState(false);
 
   const router = useRouter();
 
   const statusOptions: { value: BookStatus; label: string }[] = [
-    { value: BookStatus.wishlist, label: 'Wishlist' },
-    { value: BookStatus.reading, label: 'Reading' },
-    { value: BookStatus.completed, label: 'Completed' },
+    { value: BookStatus.wishlist, label: "Wishlist" },
+    { value: BookStatus.reading, label: "Reading" },
+    { value: BookStatus.completed, label: "Completed" },
   ];
 
   useEffect(() => {
@@ -53,10 +69,14 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
 
   const getStatusColor = (status: BookStatus) => {
     switch (status) {
-      case BookStatus.wishlist: return 'text-yellow-600';
-      case BookStatus.reading: return 'text-blue-600';
-      case BookStatus.completed: return 'text-green-600';
-      default: return 'text-gray-600';
+      case BookStatus.wishlist:
+        return "text-yellow-600";
+      case BookStatus.reading:
+        return "text-blue-600";
+      case BookStatus.completed:
+        return "text-green-600";
+      default:
+        return "text-gray-600";
     }
   };
 
@@ -65,7 +85,7 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
     setEditedStatus(newStatus);
     if (newStatus !== BookStatus.completed) {
       setEditedRating(null);
-      setEditedNotes('');
+      setEditedNotes("");
     }
   };
 
@@ -75,25 +95,36 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
       const userId = await getUserId();
       if (!userId) throw new Error("User not authenticated");
 
-      await updateBookDetails(book.id ?? "", {
-        status: editedStatus,
-        rating: editedStatus === 'completed' ? editedRating : null,
-        notes: editedStatus === 'completed' ? editedNotes : ''
-      }, userId);
+      await updateBookDetails(
+        book.id ?? "",
+        {
+          status: editedStatus,
+          rating: editedStatus === "completed" ? editedRating : null,
+          notes: editedStatus === "completed" ? editedNotes : "",
+        },
+        userId,
+      );
 
       // Refresh the page to show updated details
       window.location.reload();
     } catch (error) {
       console.error("Update failed:", error);
-      alert(`Update failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(
+        `Update failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     } finally {
       setIsUpdating(false);
       setIsEditModalOpen(false);
     }
   };
 
-  const handleFolderSelectionChange = (folderId: string, isSelected: boolean) => {
-    setSelectedFolderIds(prev => isSelected ? [...prev, folderId] : prev.filter(id => id !== folderId));
+  const handleFolderSelectionChange = (
+    folderId: string,
+    isSelected: boolean,
+  ) => {
+    setSelectedFolderIds((prev) =>
+      isSelected ? [...prev, folderId] : prev.filter((id) => id !== folderId),
+    );
   };
 
   const handleRemoveNow = async () => {
@@ -112,10 +143,12 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
       if (remainingFolders.length === 0) {
         await deleteBook(book.id ?? "", userId);
       }
-      router.push('/books');
+      router.push("/books");
     } catch (error) {
       console.error("Error removing book:", error);
-      alert(`Failed to remove book: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(
+        `Failed to remove book: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     } finally {
       setIsRemoving(false);
       setIsModalOpen(false);
@@ -145,10 +178,13 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Left Column - Cover & Actions */}
           <div className="flex-shrink-0 lg:sticky lg:top-8 lg:self-start flex flex-col items-center">
-            <img
-              src={book.cover_url ?? ''}
+            <Image
+              src={book.cover_url ?? ""}
               alt={book.title}
-              className="w-48 h-72 object-cover rounded-xl shadow-lg border-2 border-grey4 mb-4"
+              className="object-cover rounded-xl shadow-lg border-2 border-grey4 mb-4"
+              width={192}
+              height={288}
+              unoptimized
             />
             <button
               onClick={handleChangeCover}
@@ -163,7 +199,9 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
           <div className="flex-1 space-y-6">
             {/* Title & Author */}
             <div className="pb-2 border-b border-grey4 mb-4">
-              <h1 className="text-3xl font-bold text-foreground mb-2">{book.title}</h1>
+              <h1 className="text-3xl font-bold text-foreground mb-2">
+                {book.title}
+              </h1>
               <p className="text-lg text-grey2">by {book.author}</p>
             </div>
 
@@ -171,7 +209,9 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground">Status</h3>
+                  <h3 className="text-lg font-semibold text-foreground">
+                    Status
+                  </h3>
                   <p className={`text-sm ${getStatusColor(book.status)}`}>
                     {book.status.charAt(0).toUpperCase() + book.status.slice(1)}
                   </p>
@@ -185,18 +225,22 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
                 </button>
               </div>
 
-              {book.status === 'completed' && (
+              {book.status === "completed" && (
                 <>
                   <div>
-                    <h3 className="text-lg font-semibold text-foreground">Rating</h3>
+                    <h3 className="text-lg font-semibold text-foreground">
+                      Rating
+                    </h3>
                     <p className="text-foreground">
-                      {book.rating ? `${book.rating}/10` : 'No rating provided'}
+                      {book.rating ? `${book.rating}/10` : "No rating provided"}
                     </p>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-foreground">Notes</h3>
+                    <h3 className="text-lg font-semibold text-foreground">
+                      Notes
+                    </h3>
                     <p className="text-foreground whitespace-pre-wrap">
-                      {book.notes || 'No notes available'}
+                      {book.notes || "No notes available"}
                     </p>
                   </div>
                 </>
@@ -205,7 +249,9 @@ export default function BookInCollection({ book, item, onBack, reload }: BookInC
 
             {/* Full Description */}
             <div>
-              <h3 className="text-xl font-semibold text-foreground mb-3">Description</h3>
+              <h3 className="text-xl font-semibold text-foreground mb-3">
+                Description
+              </h3>
               <div
                 className="prose prose-sm max-w-none text-foreground"
                 dangerouslySetInnerHTML={{ __html: item.description }}

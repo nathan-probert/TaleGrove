@@ -1,12 +1,12 @@
-import '../styles/globals.css';
-import { ReactNode } from 'react';
+import "../styles/globals.css";
+import { ReactNode } from "react";
 
-import LayoutShell from '@/components/LayoutShell';
-import ThemeProvider from '@/components/ThemeProvider';
+import LayoutShell from "@/components/LayoutShell";
+import ThemeProvider from "@/components/ThemeProvider";
 
 export const metadata = {
-  title: 'TaleGrove',
-  description: 'AI-powered book recommendation and tracker app',
+  title: "TaleGrove",
+  description: "AI-powered book recommendation and tracker app",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
