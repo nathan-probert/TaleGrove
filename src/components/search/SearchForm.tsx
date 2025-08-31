@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { Loader2 } from 'lucide-react';
+import { Loader2 } from "lucide-react";
 
 type SearchFormProps = {
   title: string;
@@ -22,7 +22,10 @@ export const SearchForm = ({
   <div className="w-full max-w-md bg-background rounded-xl shadow-lg p-6 border border-grey4">
     <form onSubmit={onSubmit} className="space-y-6">
       <div>
-        <label htmlFor="title" className="block text-sm font-medium text-foreground mb-2">
+        <label
+          htmlFor="title"
+          className="block text-sm font-medium text-foreground mb-2"
+        >
           Title
         </label>
         <input
@@ -36,7 +39,10 @@ export const SearchForm = ({
       </div>
 
       <div>
-        <label htmlFor="author" className="block text-sm font-medium text-foreground mb-2">
+        <label
+          htmlFor="author"
+          className="block text-sm font-medium text-foreground mb-2"
+        >
           Author
         </label>
         <input
@@ -60,7 +66,7 @@ export const SearchForm = ({
             <span>Searching...</span>
           </>
         ) : (
-          'Search Books'
+          "Search Books"
         )}
       </button>
     </form>

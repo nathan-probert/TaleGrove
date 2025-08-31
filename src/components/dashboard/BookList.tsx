@@ -1,9 +1,8 @@
-'use client';
+"use client";
 
-import { BookOrFolder, Folder } from '@/types';
-import FolderCard from '@/components/dashboard/FolderCard';
-import BookCard from './BookCard';
-
+import { BookOrFolder, Folder } from "@/types";
+import FolderCard from "@/components/dashboard/FolderCard";
+import BookCard from "./BookCard";
 
 interface Props {
   items: BookOrFolder[];
@@ -11,19 +10,28 @@ interface Props {
   folderId: string | null;
   parentFolderId?: string | null;
   parentFolderSlug?: string | null;
-  refresh: () => void;
+  onRefresh: (hideId?: string) => void;
   breadcrumbs?: { id: string | null; name: string; slug: string | null }[];
   isRoot: boolean;
 }
 
-export default function BookList({ items, onFolderClick, folderId, parentFolderId, parentFolderSlug, refresh, breadcrumbs = [], isRoot }: Props) {
+export default function BookList({
+  items,
+  onFolderClick,
+  folderId,
+  parentFolderId,
+  parentFolderSlug,
+  onRefresh,
+  breadcrumbs = [],
+  isRoot,
+}: Props) {
   const parentCrumb = breadcrumbs[breadcrumbs.length - 2];
 
   const goUpFolder: Folder & { isFolder: true } = {
-    id: parentFolderId ?? 'null',
-    name: parentFolderSlug ?? 'Home',
-    slug: parentFolderSlug ?? 'null',
-    user_id: '',
+    id: parentFolderId ?? "null",
+    name: parentFolderSlug ?? "Home",
+    slug: parentFolderSlug ?? "null",
+    user_id: "",
     parent_id: null,
     isFolder: true,
     sort_order: -1,
@@ -42,25 +50,29 @@ export default function BookList({ items, onFolderClick, folderId, parentFolderI
               key={folder.id}
               folder={folder}
               onFolderClick={(id: string) => {
-                if (id === '__go_up__') {
+                if (id === "__go_up__") {
                   if (parentCrumb) {
-                    onFolderClick(parentCrumb.id || '');
+                    onFolderClick(parentCrumb.id || "");
                   }
                 } else {
                   onFolderClick(id);
                 }
               }}
-              refresh={() => {
-                if (folder.id === '__go_up__' && parentCrumb) {
-                  refresh();
-                } else {
-                  refresh();
-                }
+              onRefresh={(hideId?: string) => {
+                onRefresh(hideId);
               }}
             />
           );
         } else {
-          return <BookCard key={item.id} book={item} refresh={refresh} folderId={folderId} parentFolderId={parentFolderId ?? null} />;
+          return (
+            <BookCard
+              key={item.id}
+              book={item}
+              refresh={onRefresh}
+              folderId={folderId}
+              parentFolderId={parentFolderId ?? null}
+            />
+          );
         }
       })}
     </div>

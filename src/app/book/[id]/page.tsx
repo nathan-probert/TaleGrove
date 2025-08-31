@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { getUserId, checkIfBookInCollection } from '@/lib/supabase';
-import BookInCollection from '@/components/BookInCollection';
-import BookNotInCollection from '@/components/BookNotInCollection';
-import { Book, BookFromAPI, BookStatus } from '@/types';
-import { getBookFromAPI, getCoverUrl } from '@/lib/books_api';
-import { Loader2 } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { getUserId, checkIfBookInCollection } from "@/lib/supabase";
+import BookInCollection from "@/components/BookInCollection";
+import BookNotInCollection from "@/components/BookNotInCollection";
+import { Book, BookFromAPI, BookStatus } from "@/types";
+import { getBookFromAPI, getCoverUrl } from "@/lib/books_api";
+import { Loader2 } from "lucide-react";
 
 export default function BookDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = params?.id as string;
   const [book, setBook] = useState<Book>();
   const [item, setItem] = useState<BookFromAPI>();
@@ -57,11 +58,13 @@ export default function BookDetailPage() {
 
   // Components can't use router, so pass these down
   const handleBack = () => {
-    router.back();
-  };
-
-  const reload = () => {
-    window.location.reload();
+    // If there is a search query, go back to search page with query param
+    const q = searchParams?.get("q");
+    if (q) {
+      router.push(`/search?q=${encodeURIComponent(q)}`);
+    } else {
+      router.back();
+    }
   };
 
   // While loading api responses, show a loading message
@@ -76,9 +79,9 @@ export default function BookDetailPage() {
   return (
     <>
       {isInCollection ? (
-        <BookInCollection book={book} item={item} onBack={handleBack} reload={reload} />
+        <BookInCollection book={book} item={item} onBack={handleBack} />
       ) : (
-        <BookNotInCollection book={book} item={item} onBack={handleBack} reload={reload} />
+        <BookNotInCollection book={book} item={item} onBack={handleBack} />
       )}
     </>
   );
