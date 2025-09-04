@@ -9,7 +9,8 @@ import supabase, {
   getRootId,
   deleteFolder,
   getCurrentUser,
-} from "@/lib/supabase"; // Import deleteFolder
+  updateFolderName,
+} from "@/lib/supabase";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2, Trash2 } from "lucide-react";
@@ -244,15 +245,26 @@ export default function Books() {
     }
   };
 
-  // Refresh while optionally hiding a single item (used for drag/drop)
-  const refreshAndHide = async (hideId?: string) => {
-    if (!userId) return;
-    if (hideId) setHiddenItemIds((s) => Array.from(new Set([...s, hideId])));
+  const handleRenameFolder = async () => {
+    if (!userId || !currentFolderId) {
+      console.error("User not logged in or current folder ID missing");
+      return;
+    }
+
+    const newName = window.prompt("Enter new folder name:");
+    if (!newName?.trim()) return;
+
+    setIsLoading(true);
     try {
-      await fetchData(userId, slugArray, true);
+      await updateFolderName(currentFolderId, newName, userId);
+      await fetchData(userId, slugArray);
+    } catch (error) {
+      console.error("Error renaming folder:", error);
+      alert(
+        `Failed to rename folder. ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     } finally {
-      // Clear hidden IDs after refresh completes
-      setHiddenItemIds([]);
+      setIsLoading(false);
     }
   };
 
@@ -316,24 +328,62 @@ export default function Books() {
 
           {/* Delete Button */}
           {!isRoot && currentFolderId && (
-            <button
-              onClick={handleDeleteFolder}
-              disabled={isLoading || isDeleting}
-              className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 "
-              title={`Delete folder: ${breadcrumbs[breadcrumbs.length - 1]?.name}`}
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Folder
-                </>
-              )}
-            </button>
+            <div className="flex gap-2">
+              {" "}
+              {/* Container for folder action buttons */}
+              {/* Rename Button */}
+              <button
+                onClick={handleRenameFolder} // Add a handler function for renaming
+                disabled={isLoading || isDeleting}
+                className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
+                title={`Rename folder: ${breadcrumbs[breadcrumbs.length - 1]?.name}`}
+              >
+                {/* Add isRenaming state check for loading indicator */}
+                {false ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Renaming...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="mr-2 h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                    Rename
+                  </>
+                )}
+              </button>
+              {/* Existing Delete Button */}
+              <button
+                onClick={handleDeleteFolder}
+                disabled={isLoading || isDeleting}
+                className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
+                title={`Delete folder: ${breadcrumbs[breadcrumbs.length - 1]?.name}`}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
           )}
         </div>
 

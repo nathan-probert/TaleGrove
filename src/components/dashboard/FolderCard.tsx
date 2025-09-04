@@ -48,7 +48,7 @@ export default function FolderCard({
     drop: (item: any, monitor) => {
       // Use 'any' or a more specific union type for item
       const itemType = monitor.getItemType();
-      const draggedItemUserId = item.info?.user_id ?? item.user_id; // Handle potential differences in item structure
+      const draggedItemUserId = item.info?.user_id ?? item.user_id;
 
       if (!draggedItemUserId) {
         console.error("User ID is undefined, cannot perform drop operation.");
@@ -71,6 +71,10 @@ export default function FolderCard({
       } else if (itemType === "folder") {
         // Ensure item.id is correctly passed for folders
         const folderId = item.id;
+        if (folderId === folder.id) {
+          console.log("Cannot drop a folder onto itself.");
+          return;
+        }
         addFolderToFolder(folderId, folder.id, draggedItemUserId).then(() => {
           onRefresh?.(folderId);
         });

@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   Book,
   BookRecommendation,
+  BookRecommendationStatus,
   BookStatus,
   OpenLibraryRecommendationInfo,
   UserBookData,
@@ -17,6 +18,8 @@ import {
   getRecommendations,
   getUserId,
   getUsersBooks,
+  acceptRecommendation,
+  rejectRecommendation,
   saveRecommendation,
 } from "@/lib/supabase";
 import { generateRecommendations } from "@/lib/gemini";
@@ -94,6 +97,7 @@ export default function HomePage() {
     setIsLoading(true);
     const recommendations: BookRecommendation[] = await fetchRecommendations();
     const allBookData: OpenLibraryRecommendationInfo[] = [];
+
     const allBooks: Book[] = [];
     for (const book of recommendations) {
       const currentBook = await getBookFromRecommendation(book);
@@ -118,6 +122,16 @@ export default function HomePage() {
     setRecommendations(allBookData);
     setBooks(allBooks);
 
+    const recommendationsToSave: BookRecommendation[] = allBookData.map(
+      (rec, index) => ({
+        title: rec.title,
+        author: rec.authors,
+        status: BookRecommendationStatus.pending,
+      }),
+    );
+
+    await saveRecommendations(userId ?? "", recommendationsToSave);
+
     setIsLoading(false);
     setCurrentIndex(0);
   };
@@ -130,7 +144,7 @@ export default function HomePage() {
     }
   };
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     setSelectedStatus(BookStatus.wishlist);
     setRating(null);
     setNotes("");
@@ -138,9 +152,12 @@ export default function HomePage() {
   };
 
   const handleReject = async () => {
-    await saveRecommendation(userId ?? "", {
+    console.log(recommendations[currentIndex]);
+
+    await rejectRecommendation(userId ?? "", {
       title: recommendations[currentIndex].title,
       author: recommendations[currentIndex].authors,
+      status: BookRecommendationStatus.rejected,
     });
     advanceToNext();
   };
@@ -215,6 +232,13 @@ export default function HomePage() {
         `Failed to add book: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     } finally {
+      console.log(recommendations[currentIndex]);
+      await acceptRecommendation(userId ?? "", {
+        title: recommendations[currentIndex].title,
+        author: recommendations[currentIndex].authors,
+        status: BookRecommendationStatus.pending,
+      });
+
       setIsAdding(false);
       advanceToNext();
     }

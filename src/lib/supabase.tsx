@@ -5,6 +5,7 @@ import {
   BookStatus,
   UserBookData,
   BookRecommendation,
+  BookRecommendationStatus,
 } from "@/types";
 import { UserResponse } from "@supabase/supabase-js";
 
@@ -188,6 +189,23 @@ export async function createFolder(
     .insert([
       { name, user_id: userId, parent_id: parentId, slug: slugify(name) },
     ])
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateFolderName(
+  folderId: string,
+  name: string,
+  userId: string,
+) {
+  const { data, error } = await supabase
+    .from("folders")
+    .update({ name, slug: slugify(name) })
+    .eq("id", folderId)
+    .eq("user_id", userId)
+    .select()
     .single();
 
   if (error) throw error;
@@ -396,21 +414,64 @@ export async function getUsersBooks(
   return data as UserBookData[];
 }
 
-export async function saveRecommendation(
+export async function saveRecommendations(
   userId: string,
-  recommendation: BookRecommendation,
+  recommendations: BookRecommendation[],
 ) {
-  const insertData = {
-    title: recommendation.title,
-    author: recommendation.author,
+  const insertData = recommendations.map((rec) => ({
+    title: rec.title,
+    author: rec.author,
+    status: rec.status || BookRecommendationStatus.pending,
     user_id: userId,
-  };
+  }));
+
+  if (insertData.length === 0) {
+    return true;
+  }
 
   const { error } = await supabase
     .from("book_recommendations")
-    .upsert(insertData)
-    .select()
-    .single();
+    .upsert(insertData, {
+      onConflict: "user_id, title, author",
+      ignoreDuplicates: true,
+    });
+
+  if (error) {
+    console.error("Error saving recommendations:", error);
+    throw error;
+  }
+  return true;
+}
+
+export async function acceptRecommendation(
+  userId: string,
+  recommendation: BookRecommendation,
+) {
+  console.log("Accepting recommendation:", recommendation);
+  const { error } = await supabase
+    .from("book_recommendations")
+    .delete()
+    .eq("user_id", userId)
+    .eq("title", recommendation.title)
+    .eq("author", recommendation.author);
+
+  if (error) throw error;
+  return true;
+}
+
+export async function rejectRecommendation(
+  userId: string,
+  recommendation: BookRecommendation,
+) {
+  console.log("Rejecting recommendation:", recommendation);
+  console.log("User ID:", userId);
+
+  const { error } = await supabase
+    .from("book_recommendations")
+    .update({ status: BookRecommendationStatus.rejected })
+    .eq("user_id", userId)
+    .eq("title", recommendation.title)
+    .eq("author", recommendation.author);
 
   if (error) throw error;
   return true;
@@ -419,7 +480,7 @@ export async function saveRecommendation(
 export async function getRecommendations(userId: string) {
   const { data, error } = await supabase
     .from("book_recommendations")
-    .select("title, author")
+    .select("title, author, status")
     .eq("user_id", userId);
 
   if (error) throw error;

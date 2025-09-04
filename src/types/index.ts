@@ -52,9 +52,15 @@ export type UserBookData = {
   notes?: string | null; // took out date_read for now
 }
 
+
+export enum BookRecommendationStatus {
+  pending = 'pending',
+  rejected = 'rejected',
+} // don't need accepted since it will be in library
 export type BookRecommendation = {
   title: string;
   author: string;
+  status: BookRecommendationStatus;
 }
 
 export type OpenLibraryRecommendationInfo = {
