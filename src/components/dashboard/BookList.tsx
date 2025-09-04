@@ -29,7 +29,7 @@ export default function BookList({
 
   const goUpFolder: Folder & { isFolder: true } = {
     id: parentFolderId ?? "null",
-    name: parentFolderSlug ?? "Home",
+    name: parentCrumb?.name ?? "Home",
     slug: parentFolderSlug ?? "null",
     user_id: "",
     parent_id: null,

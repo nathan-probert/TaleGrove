@@ -9,10 +9,12 @@ import supabase, {
   getRootId,
   deleteFolder,
   getCurrentUser,
+  updateFolderName,
 } from "@/lib/supabase"; // Import deleteFolder
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2, Trash2 } from "lucide-react";
+import { FolderNameModal } from "@/components/Modals/FolderNameModal";
 
 export default function Books() {
   const params = useParams();
@@ -37,6 +39,9 @@ export default function Books() {
   >([{ id: null, name: "Home", slug: null }]);
   const [isRoot, setIsRoot] = useState<boolean>(false);
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
+  const [isFolderModalOpen, setIsFolderModalOpen] = useState<boolean>(false);
+  const [folderModalMode, setFolderModalMode] = useState<"create" | "rename">("create");
+  const [currentFolderName, setCurrentFolderName] = useState<string>("");
 
   const router = useRouter();
 
@@ -191,21 +196,9 @@ export default function Books() {
       return;
     }
 
-    const folderName = window.prompt("Enter new folder name:");
-    if (!folderName?.trim()) return;
-
-    setIsLoading(true);
-    try {
-      await createFolder(folderName, userId, currentFolderId);
-      await fetchData(userId, slugArray);
-    } catch (error) {
-      console.error("Error creating folder:", error);
-      alert(
-        `Failed to create folder. ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    setFolderModalMode("create");
+    setCurrentFolderName("");
+    setIsFolderModalOpen(true);
   };
 
   const handleDeleteFolder = async () => {
@@ -256,6 +249,48 @@ export default function Books() {
     }
   };
 
+  const handleRenameFolder = async () => {
+    if (!userId || !currentFolderId) {
+      console.error("User not logged in or current folder ID missing");
+      return;
+    }
+
+    setFolderModalMode("rename");
+    setCurrentFolderName(breadcrumbs[breadcrumbs.length - 1]?.name || "");
+    setIsFolderModalOpen(true);
+  };
+
+  const handleFolderModalConfirm = async (folderName: string) => {
+    if (!userId || !currentFolderId) return;
+
+    try {
+      if (folderModalMode === "create") {
+        setIsLoading(true);
+        await createFolder(folderName, userId, currentFolderId);
+        await fetchData(userId, slugArray);
+      } else if (folderModalMode === "rename") {
+        await updateFolderName(currentFolderId, folderName, userId);
+        // Compute new slug and update URL
+        const newSlug = folderName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-") // replace non-alphanumeric with hyphen
+          .replace(/(^-|-$)+/g, ""); // trim hyphens
+        const newSlugArray = [...slugArray];
+        newSlugArray[newSlugArray.length - 1] = newSlug;
+        const newPath = newSlugArray.join('/');
+        router.push(newPath ? `/books/${newPath}` : '/books');
+      }
+      setIsFolderModalOpen(false);
+    } catch (error) {
+      console.error(`Error ${folderModalMode === "create" ? "creating" : "renaming"} folder:`, error);
+      alert(
+        `Failed to ${folderModalMode === "create" ? "create" : "rename"} folder. ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (isLoading && !books.length && !isDeleting) {
     return (
       <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
@@ -298,11 +333,10 @@ export default function Books() {
                       )}
                       <button
                         onClick={() => handleBreadcrumbClick(crumb)}
-                        className={`text-sm font-medium ${
-                          index === breadcrumbs.length - 1
-                            ? "text-foreground cursor-default"
-                            : "text-grey2 hover:text-primary "
-                        }`}
+                        className={`text-sm font-medium ${index === breadcrumbs.length - 1
+                          ? "text-foreground cursor-default"
+                          : "text-grey2 hover:text-primary "
+                          }`}
                         disabled={index === breadcrumbs.length - 1}
                       >
                         {crumb.name}
@@ -316,24 +350,62 @@ export default function Books() {
 
           {/* Delete Button */}
           {!isRoot && currentFolderId && (
-            <button
-              onClick={handleDeleteFolder}
-              disabled={isLoading || isDeleting}
-              className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 "
-              title={`Delete folder: ${breadcrumbs[breadcrumbs.length - 1]?.name}`}
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Folder
-                </>
-              )}
-            </button>
+            <div className="flex gap-2">
+              {" "}
+              {/* Container for folder action buttons */}
+              {/* Rename Button */}
+              <button
+                onClick={handleRenameFolder} // Add a handler function for renaming
+                disabled={isLoading || isDeleting}
+                className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
+                title={`Rename folder: ${breadcrumbs[breadcrumbs.length - 1]?.name}`}
+              >
+                {/* Add isRenaming state check for loading indicator */}
+                {false ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Renaming...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="mr-2 h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                    Rename
+                  </>
+                )}
+              </button>
+              {/* Existing Delete Button */}
+              <button
+                onClick={handleDeleteFolder}
+                disabled={isLoading || isDeleting}
+                className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
+                title={`Delete folder: ${breadcrumbs[breadcrumbs.length - 1]?.name}`}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
           )}
         </div>
 
@@ -396,12 +468,23 @@ export default function Books() {
                     : null
                 }
                 onRefresh={(hideId?: string) => refreshAndHide(hideId)}
+                breadcrumbs={breadcrumbs}
                 isRoot={isRoot}
               />
             </div>
           </div>
         )}
       </div>
+
+      <FolderNameModal
+        isOpen={isFolderModalOpen}
+        onClose={() => setIsFolderModalOpen(false)}
+        onConfirm={handleFolderModalConfirm}
+        title={folderModalMode === "create" ? "Create New Folder" : "Rename Folder"}
+        confirmButtonText={folderModalMode === "create" ? "Create" : "Rename"}
+        initialName={currentFolderName}
+        isLoading={isLoading}
+      />
     </div>
   );
 }
