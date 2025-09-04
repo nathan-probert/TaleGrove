@@ -44,7 +44,7 @@ export default function Header() {
               alt="TaleGrove Logo"
               width={44}
               height={44}
-              className="object-contain block dark:hidden -mt-2"
+              className="object-contain block dark:hidden -mt-2 w-auto h-auto"
               priority
             />
             {/* Dark theme logo */}
@@ -53,7 +53,7 @@ export default function Header() {
               alt="TaleGrove Logo (Dark)"
               width={44}
               height={44}
-              className="object-contain hidden dark:block -mt-2"
+              className="object-contain hidden dark:block -mt-2 w-auto h-auto"
               priority
             />
             <h1 className="text-3xl font-bold text-primary flex items-center">
@@ -118,11 +118,10 @@ function NavLink({
   return (
     <Link
       href={href}
-      className={`flex items-center space-x-3 px-6 py-3 rounded-xl text-xl  ${
-        active
-          ? "bg-primary/10 text-primary"
-          : "hover:bg-muted text-foreground/80 hover:text-foreground"
-      }`}
+      className={`flex items-center space-x-3 px-6 py-3 rounded-xl text-xl  ${active
+        ? "bg-primary/10 text-primary"
+        : "hover:bg-muted text-foreground/80 hover:text-foreground"
+        }`}
     >
       {icon}
       <span className="hidden sm:inline-block font-semibold">{children}</span>

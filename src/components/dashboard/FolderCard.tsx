@@ -71,6 +71,10 @@ export default function FolderCard({
       } else if (itemType === "folder") {
         // Ensure item.id is correctly passed for folders
         const folderId = item.id;
+        if (folderId === folder.id) {
+          console.log("Cannot drop a folder onto itself.");
+          return;
+        }
         addFolderToFolder(folderId, folder.id, draggedItemUserId).then(() => {
           onRefresh?.(folderId);
         });

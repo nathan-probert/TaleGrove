@@ -194,6 +194,23 @@ export async function createFolder(
   return data;
 }
 
+export async function updateFolderName(
+  folderId: string,
+  name: string,
+  userId: string,
+) {
+  const { data, error } = await supabase
+    .from("folders")
+    .update({ name, slug: slugify(name) })
+    .eq("id", folderId)
+    .eq("user_id", userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function addBookToFolder(
   bookId: string,
   oldFolderId: string,
