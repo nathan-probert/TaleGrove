@@ -1,6 +1,5 @@
 import { BaseModal } from "./BaseModal";
 import { Info, Search } from "lucide-react";
-import { BookStatus } from "@/types";
 import { useState } from "react";
 
 interface AddBookModalProps {
@@ -22,6 +21,7 @@ interface AddBookModalProps {
   dateRead: string;
   setDateRead: (date: string) => void;
 }
+
 
 export const AddBookModal = ({
   isOpen,
