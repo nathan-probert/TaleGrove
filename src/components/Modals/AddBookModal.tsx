@@ -68,7 +68,7 @@ export const AddBookModal = ({
       loadingText="Adding..."
       disabled={isAdding || selectedFolderIds.length === 0}
     >
-      <div className="max-h-[70vh] overflow-hidden space-y-6 pr-4 pl-1">
+      <div className="max-h-[70vh] overflow-y-auto space-y-6 pr-4 pl-1">
         {/* Status selection */}
         <div className="mb-4">
           <p className="text-sm font-medium text-foreground mb-2">
@@ -120,7 +120,7 @@ export const AddBookModal = ({
           </div>
         </div>
 
-        {selectedStatus === BookStatus.completed && (
+        {selectedStatus.toLowerCase() === "completed" && (
           <div className="space-y-4 pb-4">
             {/* Date Finished Input */}
             <div>
@@ -178,22 +178,23 @@ export const AddBookModal = ({
             {/* Rating Input */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-3">
-                Your Rating: {rating || 0}/10
+                Your Rating: {rating && rating >= 1 ? rating : 1}/10
               </label>
               <div className="flex items-center gap-4">
                 <input
                   type="range"
-                  min="1"
-                  max="10"
-                  value={rating || 1}
+                  min={1}
+                  max={10}
+                  value={typeof rating === "number" && rating >= 1 ? rating : 1}
                   onChange={(e) => {
                     const value = Number(e.target.value);
                     setRating(value);
                   }}
                   className="slider-thumb"
+                  aria-label="Rating"
                   style={
                     {
-                      "--fill-percent": `${((Number(rating || 1) - 1) / 9) * 100}%`,
+                      "--fill-percent": `${(((typeof rating === "number" && rating >= 1 ? rating : 1) - 1) / 9) * 100}%`,
                     } as React.CSSProperties
                   }
                 />

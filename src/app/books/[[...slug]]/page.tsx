@@ -430,7 +430,7 @@ export default function Books() {
             href="/search"
             className="inline-flex items-center px-6 py-3 rounded-md shadow-sm text-lg font-medium text-foreground bg-secondary duration-200 ease-in-out cursor-pointer transform hover:scale-105 transition-transform will-change-transform"
           >
-            Search for Books
+            Add Books
           </Link>
         </div>
 
