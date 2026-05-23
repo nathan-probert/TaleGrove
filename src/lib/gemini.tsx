@@ -9,7 +9,7 @@ if (!apiKey) {
 const genAI = new GoogleGenerativeAI(apiKey);
 
 const model = genAI.getGenerativeModel({
-  model: "models/gemini-1.5-flash",
+  model: "models/gemini-3.1-flash-lite",
 });
 
 function _createPrompt(userData: string, recommendationData: string): string {

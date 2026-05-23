@@ -26,6 +26,15 @@ import { AddBookModal } from "@/components/Modals/AddBookModal";
 
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Prevent scrolling when this page is mounted
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
   const [recommendations, setRecommendations] = useState<
     OpenLibraryRecommendationInfo[]
   >([]);

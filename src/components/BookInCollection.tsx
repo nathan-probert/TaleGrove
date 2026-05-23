@@ -1,4 +1,5 @@
 import { Book, BookStatus, Folder, BookFromAPI } from "@/types";
+import { formatDateString } from "@/lib/formatDate";
 import {
   getUserId,
   deleteBook,
@@ -235,6 +236,14 @@ export default function BookInCollection({
                       {book.rating ? `${book.rating}/10` : "No rating provided"}
                     </p>
                   </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground">
+                        Date Read
+                      </h3>
+                      <p className="text-foreground">
+                        {book.date_read ? formatDateString(book.date_read) : "No date provided"}
+                      </p>
+                    </div>
                   <div>
                     <h3 className="text-lg font-semibold text-foreground">
                       Notes
