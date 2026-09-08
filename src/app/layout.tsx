@@ -8,7 +8,7 @@ export const metadata = {
   title: "TaleGrove",
   description: "AI-powered book recommendation and tracker app",
   icons: {
-    icon: "/images/colour_logo.png",
+    icon: "/images/logo_light.png",
   },
 };
 
