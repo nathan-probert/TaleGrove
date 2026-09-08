@@ -1,7 +1,3 @@
-// MAKING MIDDLEWARE AS OPENLIBRARY AND GOOGLE BOOKS ARE SIMILAR, NOT SURE WHICH WAY TO GO
-
-// UPDATE: USING GOOGLE BOOKS API FOR NOW, OPENLIBRARY IS MORE CUBERSOME AS I HAVE TO MAKE MULTIPLE CALLS TO GET THE DATA I NEED
-
 import {
   Author,
   BookFromAPI,
@@ -12,7 +8,6 @@ import {
 } from "@/types";
 
 const useGoogle = true;
-const googleApiKey = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY;
 
 function _parseCategories(categories: string[]): string[] {
   const tags = new Set<string>();
@@ -96,9 +91,7 @@ async function openLibraryToGeneral(
 
 export async function getBookFromAPI(id: string): Promise<BookFromAPI> {
   if (useGoogle) {
-    const res = await fetch(
-      `https://www.googleapis.com/books/v1/volumes/${id}?key=${googleApiKey}`,
-    );
+    const res = await fetch(`/api/books/volumes/${id}`);
     const fetchedItem = await res.json();
     return googleToGeneral(fetchedItem);
   } else {
@@ -122,18 +115,12 @@ export async function searchForBooks(
   maxResults: number = 15,
 ): Promise<BookFromAPI[]> {
   if (useGoogle) {
-    const queryParts = [];
-    if (title) queryParts.push(`intitle:${encodeURIComponent(title)}`);
-    if (author) queryParts.push(`inauthor:${encodeURIComponent(author)}`);
+    const params = new URLSearchParams();
+    if (title) params.set("title", title);
+    if (author) params.set("author", author);
+    params.set("maxResults", String(maxResults));
 
-    const query = `q=${queryParts.join("+")}`;
-
-    // Include fields parameter to request only necessary data
-    const fields =
-      "items(id,volumeInfo(title,authors, description, categories))";
-    const url = `https://www.googleapis.com/books/v1/volumes?${query}&maxResults=${maxResults}&langRestrict=en&fields=${encodeURIComponent(fields)}&key=${googleApiKey}`;
-
-    const res = await fetch(url);
+    const res = await fetch(`/api/books/search?${params.toString()}`);
     const fetchedItems = await res.json();
 
     const processedResults: BookFromAPI[] = [];
@@ -207,14 +194,17 @@ export async function getOpenLibraryRecommendation(
   if (author) queryParts.push(`author=${encodeURIComponent(author)}`);
 
   const ol_query = queryParts.join("&");
-  const g_query = `q=${queryParts.join("+")}`;
 
   const ol_url = `https://openlibrary.org/search.json?${ol_query}&limit=${maxResults}`;
-  const g_url = `https://www.googleapis.com/books/v1/volumes?${g_query}&maxResults=15&langRestrict=en&key=${googleApiKey}`;
 
   let ol_res = await fetch(ol_url);
   let ol_data = await ol_res.json();
-  const g_res = await fetch(g_url);
+  // Use the server-side API route for Google Books
+  const g_params = new URLSearchParams();
+  if (title) g_params.set("title", title);
+  if (author) g_params.set("author", author);
+  g_params.set("maxResults", "15");
+  const g_res = await fetch(`/api/books/search?${g_params.toString()}`);
   const g_data = await g_res.json();
 
   if (ol_data.docs.length === 0) {
