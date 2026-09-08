@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const googleApiKey =
-  process.env.GOOGLE_BOOKS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY;
+const googleApiKey = process.env.GOOGLE_BOOKS_API_KEY;
 
 export async function GET(
   _request: NextRequest,

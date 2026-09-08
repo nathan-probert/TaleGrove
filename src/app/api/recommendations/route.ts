@@ -48,8 +48,7 @@ function _cleanJsonResponse(response: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey =
-      process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         { error: "Missing GEMINI_API_KEY environment variable." },
