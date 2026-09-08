@@ -23,6 +23,7 @@ import { generateRecommendations } from "@/lib/gemini";
 import { Folder } from "@/types";
 import { getUserFolders } from "@/lib/supabase";
 import { AddBookModal } from "@/components/Modals/AddBookModal";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -218,6 +219,7 @@ export default function HomePage() {
         dateRead,
       );
       setIsAddModalOpen(false);
+      advanceToNext();
     } catch (error) {
       console.error("Error adding book:", error);
       alert(
@@ -225,7 +227,6 @@ export default function HomePage() {
       );
     } finally {
       setIsAdding(false);
-      advanceToNext();
     }
   };
 
@@ -311,7 +312,9 @@ export default function HomePage() {
                   <div className="text-gray-700 border-l-4 border-emerald-100 pl-6 max-h-80 overflow-y-auto pr-2">
                     <div
                       dangerouslySetInnerHTML={{
-                        __html: recommendations[currentIndex].description,
+                        __html: sanitizeHtml(
+                          recommendations[currentIndex].description,
+                        ),
                       }}
                     />
                   </div>

@@ -217,7 +217,7 @@ export async function addBookToFolder(
   folderId: string | null,
   userId: string,
 ) {
-  if (folderId !== "null") {
+  if (folderId && folderId !== "null") {
     const { error } = await supabase
       .from("folder_books")
       .insert([{ book_id: bookId, folder_id: folderId, user_id: userId }]);
@@ -326,7 +326,7 @@ export async function getUserFolders(userId: string) {
   return data;
 }
 
-export async function getRootId(userId: string): Promise<string> {
+export async function getRootId(userId: string): Promise<string | null> {
   const { data, error } = await supabase
     .from("folders")
     .select("id")

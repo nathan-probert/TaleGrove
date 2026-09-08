@@ -22,7 +22,11 @@ export async function fetchUserBooksAndFolders(
   return [...folders, ...books];
 }
 
-export const deleteUserBook = async (id: string) => {
-  const { error } = await supabase.from("books").delete().eq("id", id);
+export const deleteUserBook = async (id: string, userId: string) => {
+  const { error } = await supabase
+    .from("books")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
   if (error) throw error;
 };

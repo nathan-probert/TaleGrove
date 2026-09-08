@@ -9,6 +9,7 @@ import {
   addBookToFolders,
 } from "@/lib/supabase";
 import { AddBookModal } from "./Modals/AddBookModal";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 interface BookNotInCollectionProps {
   book: Book;
@@ -197,7 +198,7 @@ export default function BookNotInCollection({
       />
       <div
         className="text-foreground mb-4 prose prose-sm sm:prose" // Using prose for better text formatting
-        dangerouslySetInnerHTML={{ __html: item.description }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }}
       />
 
       {/* Add to Collection Button */}

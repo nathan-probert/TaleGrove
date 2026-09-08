@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { ArrowLeft, Trash2, ImageIcon, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { RemoveBookModal } from "./Modals/RemoveBookModal";
 import { EditBookModal } from "./Modals/EditBookModal";
 
@@ -263,7 +264,7 @@ export default function BookInCollection({
               </h3>
               <div
                 className="prose prose-sm max-w-none text-foreground"
-                dangerouslySetInnerHTML={{ __html: item.description }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }}
               />
             </div>
 
