@@ -27,6 +27,16 @@ export default function SignUp() {
       return;
     }
 
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (!/(?=.*[A-Za-z])(?=.*\d)/.test(password)) {
+      setError("Password must contain at least one letter and one number.");
+      return;
+    }
+
     setLoading(true);
     const { data, error: signUpError } = await signUpWithEmail(email, password);
     setLoading(false);
@@ -132,7 +142,7 @@ export default function SignUp() {
                   <input
                     type={showPassword ? "text" : "password"}
                     required
-                    minLength={6}
+                    minLength={8}
                     className="w-full px-4 py-2.5 rounded-lg border border-grey4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-grey2 text-black pr-12"
                     placeholder="••••••••"
                     value={password}
@@ -193,7 +203,7 @@ export default function SignUp() {
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     required
-                    minLength={6}
+                    minLength={8}
                     className="w-full px-4 py-2.5 rounded-lg border border-grey4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-grey2 text-black pr-12"
                     placeholder="••••••••"
                     value={confirmPassword}

@@ -40,8 +40,13 @@ export default function ResetPassword() {
     if (password !== confirmPassword) {
       return setError("Passwords do not match");
     }
-    if (password.length < 6) {
-      return setError("Password must be at least 6 characters");
+    if (password.length < 8) {
+      return setError("Password must be at least 8 characters");
+    }
+    if (!/(?=.*[A-Za-z])(?=.*\d)/.test(password)) {
+      return setError(
+        "Password must contain at least one letter and one number",
+      );
     }
 
     setLoading(true);
@@ -126,7 +131,7 @@ export default function ResetPassword() {
                 <input
                   type="password"
                   required
-                  minLength={6}
+                  minLength={8}
                   className="w-full px-4 py-2.5 rounded-lg border border-grey4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-grey2 text-foreground"
                   placeholder="••••••••"
                   value={password}
@@ -143,7 +148,7 @@ export default function ResetPassword() {
                 <input
                   type="password"
                   required
-                  minLength={6}
+                  minLength={8}
                   className="w-full px-4 py-2.5 rounded-lg border border-grey4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-grey2 text-foreground"
                   placeholder="••••••••"
                   value={confirmPassword}

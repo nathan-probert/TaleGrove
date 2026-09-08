@@ -64,8 +64,14 @@ async function openLibraryToGeneral(
   const authors = await Promise.all(
     authorKeys.map(async (key: string) => {
       const res = await fetch(`https://openlibrary.org${key}.json`);
+      if (!res.ok) {
+        console.warn(
+          `OpenLibrary author fetch failed: ${res.status} for key ${key}`,
+        );
+        return "Unknown Author";
+      }
       const data = await res.json();
-      return data.name;
+      return data.name ?? "Unknown Author";
     }),
   );
 
@@ -73,12 +79,19 @@ async function openLibraryToGeneral(
   const editionRes = await fetch(
     `https://openlibrary.org/works/${fetchedItem.id}/editions.json?limit=1`,
   );
-  const editionData = await editionRes.json();
-  const firstEdition = editionData.entries?.[0];
-  const isbn =
-    firstEdition?.isbn_13?.[0] ??
-    firstEdition?.isbn_10?.[0] ??
-    "No ISBN available";
+  let isbn = "No ISBN available";
+  if (!editionRes.ok) {
+    console.warn(
+      `OpenLibrary editions fetch failed: ${editionRes.status} for work ${fetchedItem.id}`,
+    );
+  } else {
+    const editionData = await editionRes.json();
+    const firstEdition = editionData.entries?.[0];
+    isbn =
+      firstEdition?.isbn_13?.[0] ??
+      firstEdition?.isbn_10?.[0] ??
+      "No ISBN available";
+  }
 
   return {
     id: fetchedItem.id,
@@ -96,6 +109,11 @@ export async function getBookFromAPI(id: string): Promise<BookFromAPI> {
     return googleToGeneral(fetchedItem);
   } else {
     const workRes = await fetch(`https://openlibrary.org/works/${id}.json`);
+    if (!workRes.ok) {
+      throw new Error(
+        `OpenLibrary work fetch failed: ${workRes.status} for id ${id}`,
+      );
+    }
     const fetchedItem = await workRes.json();
     return await openLibraryToGeneral(fetchedItem);
   }
@@ -142,6 +160,9 @@ export async function searchForBooks(
 
     const url = `https://openlibrary.org/search.json?${query}&limit=${maxResults}`;
     const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`OpenLibrary search failed: ${res.status}`);
+    }
 
     const data = await res.json();
 
@@ -149,7 +170,7 @@ export async function searchForBooks(
       data.docs.slice(0, maxResults).map(async (doc: OpenLibraryDoc) => {
         const bookId = doc.key?.replace("/works/", "");
         const title = doc.title ?? "Unknown Title";
-        const authors = doc.authors.join(", ") ?? "Unknown Author";
+        const authors = doc.authors?.join(", ") ?? "Unknown Author";
 
         return await _getOpenLibraryBookData(bookId, title, authors);
       }),
@@ -165,8 +186,20 @@ async function _getOpenLibraryBookData(
   authors: string,
 ): Promise<BookFromAPI> {
   const editionRes = await fetch(
-    `https://openlibrary.org/works/${bookId}.json`,
+    `https://openlibrary.org/works/${bookId}/editions.json?limit=1`,
   );
+  if (!editionRes.ok) {
+    console.warn(
+      `OpenLibrary work fetch failed: ${editionRes.status} for id ${bookId}`,
+    );
+    return {
+      id: bookId,
+      title: title,
+      authors: authors,
+      description: "No description available.",
+      isbn: "No ISBN available",
+    } as BookFromAPI;
+  }
   const editionData = await editionRes.json();
   const firstEdition = editionData.entries?.[0];
   const isbn =
@@ -198,6 +231,9 @@ export async function getOpenLibraryRecommendation(
   const ol_url = `https://openlibrary.org/search.json?${ol_query}&limit=${maxResults}`;
 
   let ol_res = await fetch(ol_url);
+  if (!ol_res.ok) {
+    throw new Error(`OpenLibrary search failed: ${ol_res.status}`);
+  }
   let ol_data = await ol_res.json();
   // Use the server-side API route for Google Books
   const g_params = new URLSearchParams();
@@ -211,6 +247,9 @@ export async function getOpenLibraryRecommendation(
     // try removing author from query
     const ol_query_no_author = `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=${maxResults}`;
     ol_res = await fetch(ol_query_no_author);
+    if (!ol_res.ok) {
+      throw new Error(`OpenLibrary search retry failed: ${ol_res.status}`);
+    }
     ol_data = await ol_res.json();
     if (ol_data.docs.length === 0) {
       throw new Error(
@@ -225,7 +264,14 @@ export async function getOpenLibraryRecommendation(
   const ol_book_url = `https://openlibrary.org/works/${ol_bookId}.json`;
 
   const bookRes = await fetch(ol_book_url);
-  const bookData = await bookRes.json();
+  let bookData: { description?: string | { value?: string } } = {};
+  if (!bookRes.ok) {
+    console.warn(
+      `OpenLibrary work fetch failed: ${bookRes.status} for id ${ol_bookId}`,
+    );
+  } else {
+    bookData = await bookRes.json();
+  }
   let description = null;
   if (bookData.description) {
     if (typeof bookData.description === "string") {
@@ -237,15 +283,16 @@ export async function getOpenLibraryRecommendation(
 
   // get other info from google books
   // Google search is weird, sometimes it won't return the correct book first
+  // Google Books omits `items` when totalItems is 0, so guard against undefined.
   let g_doc: GoogleBooksVolume | null = null;
-  for (const item of g_data.items) {
+  for (const item of g_data.items ?? []) {
     if (item.volumeInfo.title === title) {
       g_doc = item;
       break;
     }
   }
   if (!g_doc) {
-    g_doc = g_data.items[0];
+    g_doc = g_data.items?.[0] ?? null;
   }
   if (!g_doc) {
     throw new Error(

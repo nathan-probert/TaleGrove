@@ -102,7 +102,7 @@ export type OpenLibraryDoc = {
   id: string;
   key: string;
   title: string;
-  authors: Author[];
+  authors?: Author[];
   cover_edition_key: string;
   cover_i: number;
   first_publish_year: number;
