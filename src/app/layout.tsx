@@ -7,6 +7,9 @@ import ThemeProvider from "@/components/ThemeProvider";
 export const metadata = {
   title: "TaleGrove",
   description: "AI-powered book recommendation and tracker app",
+  icons: {
+    icon: "/images/colour_logo.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

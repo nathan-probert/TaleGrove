@@ -13,9 +13,7 @@ import { Loader2 } from "lucide-react";
 import {
   Book,
   BookStatus,
-  GoogleBooksVolume,
   IndustryIdentifier,
-  OpenLibraryDoc,
 } from "@/types";
 
 export default function BookCoversPage() {
@@ -43,73 +41,21 @@ export default function BookCoversPage() {
   const fetchCovers = async (id: string, title: string, publisher?: string) => {
     setIsLoading(true);
 
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY;
-    const coverUrls: string[] = [];
+    const params = new URLSearchParams();
+    params.set("id", id);
+    if (title) params.set("title", title);
+    if (publisher) params.set("publisher", publisher);
 
-    // check google for covers
-    if (title) {
-      try {
-        let googleQuery = `q=${encodeURIComponent(title)}`;
-        if (publisher) {
-          googleQuery += `+inpublisher:${encodeURIComponent(publisher)}`;
-        }
-        const googleRes = await fetch(
-          `https://www.googleapis.com/books/v1/volumes?${googleQuery}&key=${apiKey}&maxResults=10`,
-        );
-        if (googleRes.ok) {
-          const googleData = await googleRes.json();
-          if (googleData.items && googleData.items.length > 0) {
-            googleData.items.forEach((item: GoogleBooksVolume) => {
-              // Ensure cover exists and avoid duplicates
-              const coverUrl = getCoverUrl(item.id);
-              if (coverUrl && !coverUrls.includes(coverUrl)) {
-                coverUrls.push(coverUrl);
-              }
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching from Google Books:", error);
-      }
+    try {
+      const res = await fetch(`/api/books/covers?${params.toString()}`);
+      const data = await res.json();
+      setCovers(data.covers || []);
+    } catch (error) {
+      console.error("Error fetching covers:", error);
+      setCovers([]);
+    } finally {
+      setIsLoading(false);
     }
-
-    // check open library for covers
-    if (title) {
-      try {
-        let openLibraryQuery = `title=${encodeURIComponent(title)}`;
-        if (publisher) {
-          openLibraryQuery += `&publisher=${encodeURIComponent(publisher)}`;
-        }
-        const openLibraryRes = await fetch(
-          `https://openlibrary.org/search.json?${openLibraryQuery}&limit=10`,
-        );
-        if (openLibraryRes.ok) {
-          const openLibraryData = await openLibraryRes.json();
-          if (openLibraryData.docs && openLibraryData.docs.length > 0) {
-            openLibraryData.docs.forEach((doc: OpenLibraryDoc) => {
-              if (doc.cover_i) {
-                const coverUrl = `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`;
-                // Avoid duplicates
-                if (!coverUrls.includes(coverUrl)) {
-                  coverUrls.push(coverUrl);
-                }
-              }
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching from Open Library:", error);
-      }
-    }
-
-    // Add the original cover from the item if available and not already included
-    const originalCover = getCoverUrl(id);
-    if (originalCover && !coverUrls.includes(originalCover)) {
-      coverUrls.unshift(originalCover); // Add to the beginning
-    }
-
-    setCovers(coverUrls);
-    setIsLoading(false);
   };
 
   const changeCover = (coverUrl: string) => {
@@ -123,11 +69,7 @@ export default function BookCoversPage() {
 
   useEffect(() => {
     const fetchInitialData = async () => {
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY;
-
-      const res = await fetch(
-        `https://www.googleapis.com/books/v1/volumes/${id}?key=${apiKey}`,
-      );
+      const res = await fetch(`/api/books/volumes/${id}`);
       const fetchedItem = await res.json();
 
       const volumeInfo = fetchedItem.volumeInfo;
