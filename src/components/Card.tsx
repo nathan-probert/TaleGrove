@@ -5,9 +5,8 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { BookOpen, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useDrag, useDrop } from "react-dnd";
-import { reorderBookInFolder } from "@/lib/supabase";
-import { ComponentType } from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface CardProps {
   book: Book;
@@ -16,14 +15,9 @@ interface CardProps {
   refresh?: (hideId?: string) => void;
   isDraggable?: boolean;
   isSearch?: boolean;
-}
-
-interface DnDWrapperProps {
-  book: Book;
-  effectiveFolderId?: string | null;
-  refresh?: (hideId?: string) => void;
-  handleClick: () => void;
-  isSearch?: boolean;
+  /** Render a collapsed shell: keeps the sortable node mounted (so an
+   *  in-flight drag survives) while removing the card from the preview. */
+  placeholder?: boolean;
 }
 
 interface BaseCardProps {
@@ -32,74 +26,11 @@ interface BaseCardProps {
   handleClick: () => void;
 }
 
-type DraggedItemType = {
-  id: string;
-  folderId: string | null;
-  info: Book;
-};
-
-const WithDnD = (Component: ComponentType<DnDWrapperProps>) => {
-  const WrappedComponent = (props: DnDWrapperProps) => {
-    const [{ isDragging }, drag] = useDrag(() => ({
-      type: "book",
-      item: {
-        id: props.book.id,
-        folderId: props.effectiveFolderId,
-        info: props.book,
-      },
-      collect: (monitor) => ({
-        isDragging: !!monitor.isDragging(),
-      }),
-    }));
-
-    const [{ isOver }, drop] = useDrop({
-      accept: "book",
-      drop: (draggedItem: DraggedItemType) => {
-        if (
-          draggedItem.id !== props.book.id &&
-          draggedItem.folderId === props.effectiveFolderId
-        ) {
-          reorderBookInFolder(
-            draggedItem.id,
-            props.book.id,
-            props.effectiveFolderId,
-            props.book.user_id,
-          ).then(() => {
-            props.refresh?.(draggedItem.id);
-          });
-        }
-      },
-      collect: (monitor) => ({
-        isOver: monitor.isOver(),
-      }),
-    });
-
-    return (
-      <div
-        ref={(node) => {
-          drag(node);
-          drop(node);
-        }}
-        style={{
-          opacity: isDragging ? 0.5 : 1,
-          backgroundColor: isOver ? "var(--grey5)" : "transparent",
-        }}
-      >
-        <Component {...props} />
-      </div>
-    );
-  };
-
-  WrappedComponent.displayName = `WithDnD(${Component.displayName || Component.name || "Component"})`;
-  return WrappedComponent;
-};
-
 function BaseCard({ book, isSearch = false, handleClick }: BaseCardProps) {
   return (
-    <motion.li
+    <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -2 }}
       transition={{ duration: 0.2 }}
       className="group relative flex flex-col h-full rounded-lg bg-background shadow-sm hover:shadow-md border-primary transition-shadow border"
     >
@@ -158,34 +89,89 @@ function BaseCard({ book, isSearch = false, handleClick }: BaseCardProps) {
           )}
         </div>
       </button>
-    </motion.li>
+    </motion.div>
   );
 }
 
-const DnDCard = WithDnD(BaseCard);
+export function SortableBookCard({
+  book,
+  isSearch = false,
+  handleClick,
+  placeholder = false,
+}: BaseCardProps & { placeholder?: boolean }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: book.id,
+    data: { type: "book", book },
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    touchAction: "manipulation",
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  const handleWrapperClick = (e: React.MouseEvent) => {
+    // Suppress click that ends a drag (activation constraint may still emit click)
+    if (isDragging) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClickCapture={handleWrapperClick}
+      className={`h-full cursor-grab active:cursor-grabbing outline-none rounded-lg ${
+        isDragging ? "ring-2 ring-primary" : ""
+      }`}
+    >
+      {placeholder ? (
+        <div aria-hidden className="h-0 overflow-hidden" />
+      ) : (
+        <BaseCard book={book} isSearch={isSearch} handleClick={handleClick} />
+      )}
+    </div>
+  );
+}
 
 export default function Card(props: CardProps) {
   const router = useRouter();
-  const effectiveFolderId =
-    props.folderId === "__go_up__" ? props.parentFolderId : props.folderId;
 
   const handleClick = () => {
     router.push(`/book/${props.book.book_id}`);
   };
 
-  return props.isDraggable ? (
-    <DnDCard
+  // Search results are never sortable
+  if (props.isSearch || props.isDraggable === false) {
+    return (
+      <BaseCard
+        book={props.book}
+        isSearch={props.isSearch}
+        handleClick={handleClick}
+      />
+    );
+  }
+
+  return (
+    <SortableBookCard
       book={props.book}
-      effectiveFolderId={effectiveFolderId}
-      refresh={props.refresh}
-      handleClick={handleClick}
-      isSearch={props.isSearch}
-    />
-  ) : (
-    <BaseCard
-      book={props.book}
       isSearch={props.isSearch}
       handleClick={handleClick}
+      placeholder={props.placeholder}
     />
   );
 }

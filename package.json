@@ -9,6 +9,9 @@
     "lint": "prettier --write \"**/*.tsx\" && next lint"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@google/generative-ai": "^0.24.0",
     "@headlessui/react": "^2.2.2",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
@@ -20,8 +23,6 @@
     "lucide-react": "^0.488.0",
     "next": "^16.2.6",
     "react": "^19.0.0",
-    "react-dnd": "^16.0.1",
-    "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.5.0",
     "tailwind-merge": "^2.5.4",
