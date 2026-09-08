@@ -1,0 +1,37 @@
+#!/bin/sh
+# post-checkout hook: auto-copy .env* from the main worktree into a
+# newly created / checked-out worktree. Never overwrites existing files.
+# Installed to the shared hooks dir (<repo>/.git/hooks), so it applies to
+# all worktrees of this repo. Always exits 0 so it never blocks checkout.
+#
+# Git calls this as: post-checkout <old-head> <new-head> <branch-flag>
+# branch-flag=1 means branch checkout (incl. `git worktree add`), =0 means
+# file-only checkout (skip).
+
+# Only act on branch checkouts
+if [ "${3:-0}" != "1" ]; then
+  exit 0
+fi
+
+# Prefer the versioned script if present in this worktree
+TOPLEVEL="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+if [ -f "$TOPLEVEL/scripts/sync-env-from-main.sh" ]; then
+  sh "$TOPLEVEL/scripts/sync-env-from-main.sh" 2>/dev/null || true
+  exit 0
+fi
+
+# Fallback (e.g. script not yet checked out): inline copy from main
+COMMON="$(git rev-parse --git-common-dir 2>/dev/null || echo ".git")"
+case "$COMMON" in
+  /*) ;;
+  *) COMMON="$TOPLEVEL/$COMMON" ;;
+esac
+MAIN="$(dirname "$COMMON")"
+if [ "$TOPLEVEL" != "$MAIN" ]; then
+  for f in .env .env.local .env.development .env.development.local; do
+    if [ -f "$MAIN/$f" ] && [ ! -e "$TOPLEVEL/$f" ]; then
+      cp "$MAIN/$f" "$TOPLEVEL/$f" 2>/dev/null || true
+    fi
+  done
+fi
+exit 0
