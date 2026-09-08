@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import BookList from "@/components/dashboard/BookList";
 import { BookOrFolder, Folder } from "@/types";
 import { fetchUserBooksAndFolders } from "@/lib/getBooks";
@@ -48,6 +48,9 @@ export default function Books() {
   const resolveFolderPath = useCallback(
     async (userId: string, slugPath: string[]) => {
       let parentId: string | null = null;
+      // The true parent of the final folder (null at root). Tracked through
+      // the loop so move-up targets never go stale on deeper navigation.
+      let directParentId: string | null = null;
       const crumbs: { id: string | null; name: string; slug: string | null }[] =
         [{ id: null, name: "Home", slug: null }];
 
@@ -63,10 +66,8 @@ export default function Books() {
           parentId = await getRootId(userId);
         }
 
+        directParentId = parentId;
         query = query.eq("parent_id", parentId);
-        if (!parentFolderId) {
-          setParentFolderId(parentId);
-        }
         const result = await query.single();
         const data = result.data as Pick<Folder, "id" | "name" | "slug"> | null;
 
@@ -74,23 +75,28 @@ export default function Books() {
           console.warn(
             `Folder not found for slug: ${slug}, parentId: ${parentId}`,
           );
-          return { folderId: null, breadcrumbs: crumbs };
+          return { folderId: null, breadcrumbs: crumbs, directParentId: null };
         }
 
         crumbs.push({ id: data.id, name: data.name, slug: data.slug });
         parentId = data.id;
       }
 
-      return { folderId: parentId, breadcrumbs: crumbs };
+      return { folderId: parentId, breadcrumbs: crumbs, directParentId };
     },
-    [parentFolderId],
+    [],
   );
+
+  // Monotonic sequence so a superseded (older) fetch can never overwrite
+  // newer state — e.g. two rapid drag-and-drop refreshes racing each other.
+  const fetchSeqRef = useRef(0);
 
   const fetchData = useCallback(
     async (userId: string, slugPath: string[], suppressLoading = false) => {
+      const seq = ++fetchSeqRef.current;
       if (!suppressLoading) setIsLoading(true);
       try {
-        let { folderId, breadcrumbs: resolvedBreadcrumbs } =
+        let { folderId, breadcrumbs: resolvedBreadcrumbs, directParentId } =
           await resolveFolderPath(userId, slugPath);
 
         // For invalid paths, redirect to /books
@@ -111,18 +117,22 @@ export default function Books() {
           setIsRoot(false);
         }
 
+        if (seq !== fetchSeqRef.current) return; // superseded — discard
         setCurrentFolderId(folderId);
+        setParentFolderId(directParentId);
         setBreadcrumbs(resolvedBreadcrumbs);
 
         if (folderId) {
           const combined = await fetchUserBooksAndFolders(userId, folderId);
+          if (seq !== fetchSeqRef.current) return; // superseded — discard
           setBooks(combined);
         }
       } catch (error) {
         console.error("Error loading data:", error);
         router.push("/books");
       } finally {
-        if (!suppressLoading) setIsLoading(false);
+        if (!suppressLoading && seq === fetchSeqRef.current)
+          setIsLoading(false);
       }
     },
     [router, resolveFolderPath],
@@ -236,6 +246,14 @@ export default function Books() {
       setIsLoading(false);
     }
   };
+
+  // Stable identity across unrelated re-renders so BookList's optimistic
+  // drag order isn't reset by a fresh-but-identical array (e.g. a
+  // setBreadcrumbs mid-fetch would otherwise snap the grid back).
+  const visibleBooks = useMemo(
+    () => books.filter((b) => !hiddenItemIds.includes(b.id)),
+    [books, hiddenItemIds],
+  );
 
   // Refresh while optionally hiding a single item (used for drag/drop)
   const refreshAndHide = async (hideId?: string) => {
@@ -458,7 +476,7 @@ export default function Books() {
                 // Hide any items that are currently being hidden during a drag/drop refresh
               }
               <BookList
-                items={books.filter((b) => !hiddenItemIds.includes(b.id))}
+                items={visibleBooks}
                 onFolderClick={handleFolderClick}
                 folderId={currentFolderId}
                 parentFolderId={parentFolderId}

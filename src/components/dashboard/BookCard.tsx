@@ -5,22 +5,10 @@ import Card from "../Card";
 
 export default function BookCard({
   book,
-  folderId,
-  parentFolderId,
-  refresh,
+  placeholder = false,
 }: {
   book: Book;
-  folderId: string | null;
-  parentFolderId: string | null;
-  refresh?: (hideId?: string) => void;
+  placeholder?: boolean;
 }) {
-  return (
-    <Card
-      book={book}
-      folderId={folderId}
-      parentFolderId={parentFolderId}
-      refresh={refresh}
-      isDraggable
-    />
-  );
+  return <Card book={book} placeholder={placeholder} />;
 }

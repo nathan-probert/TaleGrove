@@ -218,9 +218,12 @@ export async function addBookToFolder(
   userId: string,
 ) {
   if (folderId && folderId !== "null") {
-    const { error } = await supabase
-      .from("folder_books")
-      .insert([{ book_id: bookId, folder_id: folderId, user_id: userId }]);
+    // Upsert (not insert) so moving a book that's already in the target
+    // folder is a harmless no-op instead of a unique-violation error.
+    const { error } = await supabase.from("folder_books").upsert(
+      [{ book_id: bookId, folder_id: folderId, user_id: userId }],
+      { onConflict: "folder_id,book_id" },
+    );
 
     if (error) throw error;
   }
@@ -320,7 +323,8 @@ export async function getUserFolders(userId: string) {
   const { data, error } = await supabase
     .from("folders")
     .select("*")
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .order("sort_order", { ascending: true, nullsFirst: false });
 
   if (error) throw error;
   return data;
@@ -489,5 +493,75 @@ export async function reorderBookInFolder(
   if (updateError) {
     console.error("Failed to update order:", updateError);
   }
+  return updates;
+}
+
+export async function persistBookOrder(
+  folderId: string,
+  orderedBookIds: string[],
+  userId: string,
+) {
+  if (orderedBookIds.length === 0) return [];
+
+  // Resolve folder_books row ids for each book_id in this folder
+  const { data: rows, error } = await supabase
+    .from("folder_books")
+    .select("id, book_id, folder_id")
+    .eq("folder_id", folderId)
+    .eq("user_id", userId);
+
+  if (error) throw error;
+  if (!rows) return [];
+
+  const rowByBookId = new Map(rows.map((r) => [r.book_id as string, r]));
+
+  const updates = orderedBookIds
+    .map((bookId, index) => {
+      const row = rowByBookId.get(bookId);
+      if (!row) return null;
+      return {
+        id: row.id as string,
+        folder_id: row.folder_id as string,
+        book_id: bookId,
+        user_id: userId,
+        sort_order: index + 1,
+      };
+    })
+    .filter((u): u is NonNullable<typeof u> => u !== null);
+
+  if (updates.length === 0) {
+    // Fail loudly instead of silently keeping a stale order.
+    throw new Error(
+      `persistBookOrder: none of the ${orderedBookIds.length} ordered books matched folder_books rows in folder ${folderId}`,
+    );
+  }
+
+  const { error: updateError } = await supabase
+    .from("folder_books")
+    .upsert(updates, { onConflict: "id", ignoreDuplicates: false });
+
+  if (updateError) throw updateError;
+  return updates;
+}
+
+export async function persistFolderOrder(
+  parentId: string | null,
+  orderedFolderIds: string[],
+  userId: string,
+) {
+  if (orderedFolderIds.length === 0) return [];
+
+  const updates = orderedFolderIds.map((id, index) => ({
+    id,
+    user_id: userId,
+    parent_id: parentId,
+    sort_order: index + 1,
+  }));
+
+  const { error } = await supabase
+    .from("folders")
+    .upsert(updates, { onConflict: "id", ignoreDuplicates: false });
+
+  if (error) throw error;
   return updates;
 }
