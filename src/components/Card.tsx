@@ -15,8 +15,9 @@ interface CardProps {
   refresh?: (hideId?: string) => void;
   isDraggable?: boolean;
   isSearch?: boolean;
-  /** Render a collapsed shell: keeps the sortable node mounted (so an
-   *  in-flight drag survives) while removing the card from the preview. */
+  /** Render nothing in the grid: display:none removes the cell so ranks
+   *  close as if already moved, while the sortable node stays mounted and
+   *  registered so the in-flight drag (and its data) survives. */
   placeholder?: boolean;
 }
 
@@ -137,13 +138,9 @@ export function SortableBookCard({
       onClickCapture={handleWrapperClick}
       className={`h-full cursor-grab active:cursor-grabbing outline-none rounded-lg ${
         isDragging ? "ring-2 ring-primary" : ""
-      }`}
+      } ${placeholder ? "hidden" : ""}`}
     >
-      {placeholder ? (
-        <div aria-hidden className="h-0 overflow-hidden" />
-      ) : (
-        <BaseCard book={book} isSearch={isSearch} handleClick={handleClick} />
-      )}
+      <BaseCard book={book} isSearch={isSearch} handleClick={handleClick} />
     </div>
   );
 }

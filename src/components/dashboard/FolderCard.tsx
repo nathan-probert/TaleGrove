@@ -18,8 +18,9 @@ interface FolderCardProps {
   sortable?: boolean;
   /** true while a dragged book hovers this folder: drop-target highlight */
   highlighted?: boolean;
-  /** Render a collapsed shell: keeps the sortable node mounted (so an
-   *  in-flight drag survives) while removing the card from the preview. */
+  /** Render nothing in the grid: display:none removes the cell so ranks
+   *  close as if already moved, while the sortable node stays mounted and
+   *  registered so the in-flight drag (and its data) survives. */
   placeholder?: boolean;
   /**
    * When provided (used for the "go up" button), registers an additional
@@ -174,29 +175,27 @@ export default function FolderCard({
       }}
       {...attributes}
       {...listeners}
-      className="h-full cursor-grab active:cursor-grabbing outline-none"
+      className={`h-full cursor-grab active:cursor-grabbing outline-none ${
+        placeholder ? "hidden" : ""
+      }`}
     >
-      {placeholder ? (
-        <div aria-hidden className="h-0 overflow-hidden" />
-      ) : (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-          onClick={handleClick}
-          className={`group relative flex flex-col h-full rounded-lg bg-background shadow-sm border overflow-hidden transition-shadow cursor-pointer hover:shadow-md ${
-            highlight || isDragging
-              ? "border-primary ring-2 ring-primary"
-              : "border-primary"
-          }`}
-          style={{
-            backgroundColor:
-              highlight && !isDragging ? "var(--grey5)" : "var(--background)",
-          }}
-        >
-          {content}
-        </motion.div>
-      )}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        onClick={handleClick}
+        className={`group relative flex flex-col h-full rounded-lg bg-background shadow-sm border overflow-hidden transition-shadow cursor-pointer hover:shadow-md ${
+          highlight || isDragging
+            ? "border-primary ring-2 ring-primary"
+            : "border-primary"
+        }`}
+        style={{
+          backgroundColor:
+            highlight && !isDragging ? "var(--grey5)" : "var(--background)",
+        }}
+      >
+        {content}
+      </motion.div>
     </div>
   );
 }

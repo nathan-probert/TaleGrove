@@ -422,9 +422,9 @@ export default function BookList({
   const showFolderGrid = orderedFolders.length > 0 || !isRoot;
   const showBookGrid = orderedBooks.length > 0;
 
-  // While a book is held over a folder (about to move inside), collapse its
-  // grid cell so the preview no longer shows it here. The sortable node
-  // stays mounted (placeholder shell), so the in-flight drag never breaks —
+  // While a book is held over a folder (about to move inside), remove its
+  // grid cell entirely so ranks close as if already moved. The sortable
+  // node stays mounted (display:none) so the in-flight drag never breaks —
   // dragging back out restores the card at its optimistic position.
   // movedAwayIds extends the same hiding across the post-drop network gap.
   const hiddenDragBookId =
