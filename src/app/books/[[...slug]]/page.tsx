@@ -312,7 +312,7 @@ export default function Books() {
   if (isLoading && !books.length && !isDeleting) {
     return (
       <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="max-w-[95rem] mx-auto space-y-6">
           <h1 className="text-3xl font-bold text-foreground">📚 Dashboard</h1>
           <div className="flex justify-center items-center py-12">
             <Loader2 className="h-12 w-12 text-primary animate-spin" />
@@ -323,8 +323,8 @@ export default function Books() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-2">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+      <div className="max-w-[95rem] mx-auto space-y-6">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="space-y-2">
