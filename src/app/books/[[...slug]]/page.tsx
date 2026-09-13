@@ -31,6 +31,7 @@ export default function Books() {
   const [books, setBooks] = useState<BookOrFolder[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [hasLoaded, setHasLoaded] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false); // State for delete operation
   const [hiddenItemIds, setHiddenItemIds] = useState<string[]>([]);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
@@ -126,6 +127,7 @@ export default function Books() {
           const combined = await fetchUserBooksAndFolders(userId, folderId);
           if (seq !== fetchSeqRef.current) return; // superseded — discard
           setBooks(combined);
+          setHasLoaded(true);
         }
       } catch (error) {
         console.error("Error loading data:", error);
@@ -141,6 +143,9 @@ export default function Books() {
   // Check if user is logged in and fetch data
   useEffect(() => {
     const initializeAuth = async () => {
+      // fetchData owns the loading flag (with seq guards against races),
+      // so don't clear it here — a superseded init would otherwise flash
+      // isLoading=false (and the empty state) while the latest fetch runs.
       setIsLoading(true);
       try {
         const user = await getCurrentUser();
@@ -153,8 +158,6 @@ export default function Books() {
       } catch (error) {
         console.error("Auth Error:", error);
         router.push("/signin");
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -309,7 +312,7 @@ export default function Books() {
     }
   };
 
-  if (isLoading && !books.length && !isDeleting) {
+  if (!hasLoaded && !books.length && !isDeleting) {
     return (
       <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
         <div className="max-w-[95rem] mx-auto space-y-6">
@@ -453,7 +456,7 @@ export default function Books() {
         </div>
 
         {/* Content Area */}
-        {isLoading ? (
+        {isLoading || !hasLoaded ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-12 w-12 text-primary animate-spin" />
           </div>
