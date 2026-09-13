@@ -2,7 +2,7 @@
 
 import { Book, Folder } from "@/types";
 import { motion } from "framer-motion";
-import { Book as BookIcon, FolderIcon, ArrowLeftIcon } from "lucide-react";
+import { FolderIcon, ArrowLeftIcon, BookOpen } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
@@ -67,67 +67,72 @@ export default function FolderCard({
     }
   };
 
-  // Determine grid class based on the number of books
-  const getGridClass = (count: number) => {
-    if (count === 1) return "grid grid-cols-1 grid-rows-1";
-    if (count === 2) return "grid grid-cols-2 grid-rows-1";
-    if (count === 3)
-      return "grid grid-cols-2 grid-rows-2 [&>*:nth-child(3)]:col-span-2 [&>*:nth-child(3)]:w-1/2 [&>*:nth-child(3)]:justify-self-center";
-    return "grid grid-cols-2 grid-rows-2";
-  };
-
   const booksToDisplay = books.slice(0, 4);
-  const gridClass = getGridClass(booksToDisplay.length);
+  const isGoUp = folder.parent_id === null;
+
+  const collageGrid =
+    booksToDisplay.length <= 1
+      ? "grid grid-cols-1 grid-rows-1"
+      : booksToDisplay.length === 2
+        ? "grid grid-cols-2 grid-rows-1"
+        : "grid grid-cols-2 grid-rows-2";
 
   const highlight = highlighted || (droppableId && droppableState.isOver);
 
   const content = (
-    <div className="w-full text-left group flex flex-col h-full p-4">
-      {/* Visual Representation Area */}
-      <div
-        className={`w-full bg-grey4/20 rounded-lg overflow-hidden relative aspect-square mb-4 ${booksToDisplay.length > 0 ? `${gridClass} gap-2` : "flex items-center justify-center"}`}
-      >
-        {booksToDisplay.length === 0 ? (
-          folder.parent_id === null ? (
-            <ArrowLeftIcon className="w-24 h-24 sm:w-36 sm:h-36 text-primary" />
-          ) : (
-            <FolderIcon className="w-24 h-24 sm:w-36 sm:h-36 text-primary" />
-          )
+    <div className="w-full text-left group flex items-center gap-2.5 p-2.5 h-full min-h-[68px]">
+      {/* Square collage thumbnail: up to 4 covers, else large folder icon */}
+      <div className="relative shrink-0 w-[52px] h-[52px] rounded-md overflow-hidden border border-gray-200 bg-primary/10 flex items-center justify-center">
+        {isGoUp ? (
+          <ArrowLeftIcon className="w-6 h-6 text-primary" />
+        ) : booksToDisplay.length === 0 ? (
+          <FolderIcon className="w-6 h-6 text-primary" />
         ) : (
-          <>
+          <div className={`w-full h-full ${collageGrid} gap-px bg-gray-200`}>
             {booksToDisplay.map((book, index) => (
               <div
                 key={book.id || index}
-                className="w-full h-full overflow-hidden rounded-md border border-gray-200 bg-background"
+                className="relative w-full h-full overflow-hidden bg-background"
               >
                 {book.cover_url ? (
-                  <div className="relative w-full h-full">
-                    <Image
-                      src={book.cover_url}
-                      alt={book.title}
-                      className="object-cover w-full h-full rounded-sm"
-                      fill
-                      unoptimized
-                    />
-                  </div>
+                  <Image
+                    src={book.cover_url}
+                    alt={book.title}
+                    className="object-cover w-full h-full"
+                    fill
+                    unoptimized
+                  />
                 ) : (
-                  <div className="w-full h-full bg-grey3 flex items-center justify-center rounded-md">
-                    <BookIcon className="w-6 h-6 text-grey1" />
+                  <div className="w-full h-full flex items-center justify-center bg-grey4/20">
+                    <BookOpen className="w-3.5 h-3.5 text-primary" />
                   </div>
                 )}
               </div>
             ))}
-          </>
+          </div>
         )}
       </div>
 
-      {/* Folder Name */}
-      <div className="flex-1">
-        <h3 className="text-xl font-semibold text-foreground line-clamp-2">
+      {/* Folder name + count */}
+      <div className="flex-1 min-w-0">
+        <h3
+          className="text-sm font-medium text-foreground line-clamp-1"
+          title={folder.name}
+        >
           {folder.name}
         </h3>
-        <p className="text-sm text-muted-foreground line-clamp-2">Folder</p>
+        <p className="text-xs text-muted-foreground line-clamp-1">
+          {isGoUp
+            ? "Go up"
+            : books.length > 0
+              ? `${books.length} book${books.length === 1 ? "" : "s"}`
+              : "Folder"}
+        </p>
       </div>
+
+      {!isGoUp && (
+        <FolderIcon className="w-5 h-5 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
+      )}
     </div>
   );
 

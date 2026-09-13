@@ -37,9 +37,9 @@ function BaseCard({ book, isSearch = false, handleClick }: BaseCardProps) {
     >
       <button
         onClick={handleClick}
-        className="cursor-pointer w-full text-left group flex flex-col h-full p-4 relative"
+        className="cursor-pointer w-full text-left group flex flex-col h-full p-2.5 relative"
       >
-        <div className="w-full bg-background border-foreground rounded-lg overflow-hidden aspect-[2/3] mb-4 border">
+        <div className="w-full bg-background border-foreground rounded-md overflow-hidden aspect-[2/3] mb-2 border">
           {book.cover_url ? (
             <Image
               src={book.cover_url}
@@ -51,28 +51,28 @@ function BaseCard({ book, isSearch = false, handleClick }: BaseCardProps) {
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-              <BookOpen className="w-12 h-12 text-grey3" />
+              <BookOpen className="w-8 h-8 text-grey3" />
             </div>
           )}
         </div>
 
         <div className="flex-1 flex flex-col">
           <h3
-            className="text-lg font-semibold text-foreground mb-1 line-clamp-2 group-hover:text-primary "
+            className="text-sm font-medium text-foreground mb-0.5 line-clamp-2 group-hover:text-primary "
             title={book.title}
           >
             {(book.title ?? "").length > 50
               ? `${(book.title ?? "").slice(0, 50)}…`
               : book.title}
           </h3>
-          <p className="text-sm text-grey2 line-clamp-1 mb-2">
+          <p className="text-xs text-grey2 line-clamp-1 mb-1.5">
             {book.author || "Unknown Author"}
           </p>
 
           {!isSearch && (
-            <div className="flex items-center gap-3 mt-auto">
+            <div className="flex items-center gap-1.5 mt-auto flex-wrap">
               <span
-                className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm md:text-base font-medium ${
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
                   book.status === "completed"
                     ? "bg-green-700 text-white"
                     : "bg-blue-100 text-blue-800"
@@ -81,8 +81,8 @@ function BaseCard({ book, isSearch = false, handleClick }: BaseCardProps) {
                 {book.status}
               </span>
               {book.rating && (
-                <div className="flex items-center text-base md:text-lg text-grey2">
-                  <Star className="w-5 h-5 mr-2 text-yellow-500 fill-current" />
+                <div className="flex items-center text-xs text-grey2">
+                  <Star className="w-3.5 h-3.5 mr-1 text-yellow-500 fill-current" />
                   <span className="font-medium">{book.rating}/10</span>
                 </div>
               )}
