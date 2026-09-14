@@ -117,7 +117,7 @@ export default function HomePage() {
         status: selectedStatus,
         rating: selectedStatus === BookStatus.completed ? rating : null,
         notes: selectedStatus === BookStatus.completed ? notes : null,
-        date_read: selectedStatus === BookStatus.completed ? dateRead : null,
+        date_read: selectedStatus === BookStatus.completed ? dateRead || null : null,
         book_id: currentBook.id,
         isbn: currentBook.isbn,
         categories: currentBook.categories,
@@ -144,6 +144,7 @@ export default function HomePage() {
     setSelectedStatus(BookStatus.wishlist);
     setRating(null);
     setNotes("");
+    setDateRead("");
     setIsAddModalOpen(true);
   };
 
@@ -180,7 +181,7 @@ export default function HomePage() {
     if (status === BookStatus.completed) {
       bookDataWithDetails.rating = rating;
       bookDataWithDetails.notes = notes;
-      bookDataWithDetails.date_read = dateRead;
+      bookDataWithDetails.date_read = dateRead || null;
     }
 
     // Add book to folder

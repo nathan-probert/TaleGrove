@@ -53,7 +53,7 @@ export default function BookNotInCollection({
     if (status === BookStatus.completed) {
       bookDataWithDetails.rating = rating;
       bookDataWithDetails.notes = notes;
-      bookDataWithDetails.date_read = dateRead;
+      bookDataWithDetails.date_read = dateRead || null;
     }
 
     // Add book to folder

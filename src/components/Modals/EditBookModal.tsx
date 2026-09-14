@@ -1,5 +1,6 @@
 import { BaseModal } from "./BaseModal";
 import { BookStatus } from "@/types";
+import { getLocalTodayString } from "@/lib/formatDate";
 import { useState } from "react";
 import { Info } from "lucide-react";
 
@@ -37,11 +38,13 @@ export const EditBookModal = ({
   const [dateError, setDateError] = useState<string | null>(null);
 
   const validateDate = (date: string) => {
-    const selectedDate = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (selectedDate > today) {
+    // Compare YYYY-MM-DD strings lexically — avoids the UTC-midnight shift
+    // of `new Date("YYYY-MM-DD")`, which rejects "today" in UTC+ timezones.
+    if (!date) {
+      setDateError(null);
+      return true;
+    }
+    if (date > getLocalTodayString()) {
       setDateError("Date cannot be in the future");
       return false;
     }
@@ -104,7 +107,7 @@ export const EditBookModal = ({
                       setEditedDateRead(e.target.value);
                     }
                   }}
-                  max={new Date().toISOString().split("T")[0]}
+                  max={getLocalTodayString()}
                   className="bg-background w-full p-2 pr-10 border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all text-sm custom-date-input"
                   required
                 />
