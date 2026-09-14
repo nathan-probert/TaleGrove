@@ -88,6 +88,7 @@ export default function BookInCollection({
     if (newStatus !== BookStatus.completed) {
       setEditedRating(null);
       setEditedNotes("");
+      setEditedDateRead("");
     }
   };
 
@@ -97,12 +98,15 @@ export default function BookInCollection({
       const userId = await getUserId();
       if (!userId) throw new Error("User not authenticated");
 
+      const isCompleted = editedStatus === BookStatus.completed;
+
       await updateBookDetails(
         book.id ?? "",
         {
           status: editedStatus,
-          rating: editedStatus === "completed" ? editedRating : null,
-          notes: editedStatus === "completed" ? editedNotes : "",
+          rating: isCompleted ? editedRating : null,
+          notes: isCompleted ? editedNotes : null,
+          date_read: isCompleted ? editedDateRead || null : null,
         },
         userId,
       );

@@ -85,6 +85,10 @@ export async function updatePassword(
 export async function addBook(bookData: Book): Promise<Book> {
   const insertData = { ...bookData } as Omit<Book, "id"> & { id?: string };
   delete insertData.id;
+  // Postgres `date` columns reject "" — normalize empty date to null.
+  if (insertData.date_read === "") {
+    insertData.date_read = null;
+  }
 
   const { data, error } = await supabase
     .from("books")
@@ -135,7 +139,12 @@ export async function checkIfBookInCollection(
 
 export async function updateBookDetails(
   bookId: string,
-  updates: { status: BookStatus; rating: number | null; notes: string },
+  updates: {
+    status: BookStatus;
+    rating: number | null;
+    notes: string | null;
+    date_read?: string | null;
+  },
   userId: string,
 ) {
   const { data, error } = await supabase
@@ -144,6 +153,10 @@ export async function updateBookDetails(
       status: updates.status,
       rating: updates.rating,
       notes: updates.notes,
+      date_read:
+        updates.status === BookStatus.completed
+          ? updates.date_read || null
+          : null,
     })
     .eq("id", bookId)
     .eq("user_id", userId);
