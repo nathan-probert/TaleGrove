@@ -43,6 +43,9 @@ export default function Books() {
   const [isFolderModalOpen, setIsFolderModalOpen] = useState<boolean>(false);
   const [folderModalMode, setFolderModalMode] = useState<"create" | "rename">("create");
   const [currentFolderName, setCurrentFolderName] = useState<string>("");
+  // Bumped whenever a book/folder move may have changed a subfolder's
+  // contents, so FolderCards refetch their collage/count without a reload.
+  const [folderPreviewVersion, setFolderPreviewVersion] = useState<number>(0);
 
   const router = useRouter();
 
@@ -261,7 +264,12 @@ export default function Books() {
   // Refresh while optionally hiding a single item (used for drag/drop)
   const refreshAndHide = async (hideId?: string) => {
     if (!userId) return;
-    if (hideId) setHiddenItemIds((s) => Array.from(new Set([...s, hideId])));
+    if (hideId) {
+      setHiddenItemIds((s) => Array.from(new Set([...s, hideId])));
+      // A moved item changes a subfolder's contents, but FolderCard fetches
+      // its preview on mount only — bump the version so it refetches now.
+      setFolderPreviewVersion((v) => v + 1);
+    }
     try {
       await fetchData(userId, slugArray, true);
     } finally {
@@ -491,6 +499,7 @@ export default function Books() {
                 onRefresh={(hideId?: string) => refreshAndHide(hideId)}
                 breadcrumbs={breadcrumbs}
                 isRoot={isRoot}
+                refreshKey={folderPreviewVersion}
               />
             </div>
           </div>

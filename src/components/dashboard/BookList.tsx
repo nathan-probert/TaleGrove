@@ -39,6 +39,8 @@ interface Props {
   onRefresh: (hideId?: string) => void;
   breadcrumbs?: { id: string | null; name: string; slug: string | null }[];
   isRoot: boolean;
+  /** Bumped when subfolder contents may have changed: forwarded to FolderCards so their collage/count refetches. */
+  refreshKey?: number;
 }
 
 type SortableFolder = Folder & { isFolder: true };
@@ -66,6 +68,7 @@ export default function BookList({
   onRefresh,
   breadcrumbs = [],
   isRoot,
+  refreshKey = 0,
 }: Props) {
   const parentCrumb = breadcrumbs[breadcrumbs.length - 2];
 
@@ -492,6 +495,7 @@ export default function BookList({
                     movedAwayIds.includes(folder.id) ||
                     folder.id === hiddenDragFolderId
                   }
+                  refreshKey={refreshKey}
                   onFolderClick={(id: string) => {
                     if (id === "__go_up__") {
                       if (parentCrumb) {
