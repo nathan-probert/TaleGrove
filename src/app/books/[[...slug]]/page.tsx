@@ -468,18 +468,6 @@ export default function Books() {
           <div className="flex justify-center py-12">
             <Loader2 className="h-12 w-12 text-primary animate-spin" />
           </div>
-        ) : books.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center text-grey2">
-            <div className="text-3xl font-bold mb-4">
-              Add some books to your collection to get started!
-            </div>
-            <Link
-              href="/search"
-              className="mt-2 inline-block px-6 py-3 rounded-md shadow-sm text-lg leading-none text-foreground bg-primary hover:bg-primary/80  duration-200 ease-in-out cursor-pointer transform hover:scale-105 transition-transform will-change-transform"
-            >
-              <span className="block">Get Started!</span>
-            </Link>
-          </div>
         ) : (
           <div className="space-y-6">
             <div className="space-y-4">
@@ -501,6 +489,22 @@ export default function Books() {
                 isRoot={isRoot}
                 refreshKey={folderPreviewVersion}
               />
+              {/* BookList renders nothing at root when empty, but in a
+               * subfolder it still shows the "go up" button — so an empty
+               * folder keeps its way back alongside this message. */}
+              {books.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 text-center text-grey2">
+                  <div className="text-3xl font-bold mb-4">
+                    Add some books to your collection to get started!
+                  </div>
+                  <Link
+                    href="/search"
+                    className="mt-2 inline-block px-6 py-3 rounded-md shadow-sm text-lg leading-none text-foreground bg-primary hover:bg-primary/80  duration-200 ease-in-out cursor-pointer transform hover:scale-105 transition-transform will-change-transform"
+                  >
+                    <span className="block">Get Started!</span>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         )}
