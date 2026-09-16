@@ -2,18 +2,27 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import BookList from "@/components/dashboard/BookList";
+import BookToolbar from "@/components/dashboard/BookToolbar";
+import BookCard from "@/components/dashboard/BookCard";
+import FolderCard from "@/components/dashboard/FolderCard";
 import { BookOrFolder, Folder } from "@/types";
-import { fetchUserBooksAndFolders } from "@/lib/getBooks";
+import {
+  fetchUserBooksAndFolders,
+  searchLibrary,
+  type GlobalSearchResults,
+} from "@/lib/getBooks";
 import supabase, {
   createFolder,
   getRootId,
   deleteFolder,
   getCurrentUser,
+  getUserFolders,
   updateFolderName,
-} from "@/lib/supabase"; // Import deleteFolder
+} from "@/lib/supabase";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { Loader2, Trash2 } from "lucide-react";
+import { useParams, usePathname, useRouter } from "next/navigation";
+import { Loader2, Lock, Search, Trash2 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { FolderNameModal } from "@/components/Modals/FolderNameModal";
 
 export default function Books() {
@@ -41,13 +50,135 @@ export default function Books() {
   const [isRoot, setIsRoot] = useState<boolean>(false);
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const [isFolderModalOpen, setIsFolderModalOpen] = useState<boolean>(false);
-  const [folderModalMode, setFolderModalMode] = useState<"create" | "rename">("create");
+  const [folderModalMode, setFolderModalMode] = useState<"create" | "rename">(
+    "create",
+  );
   const [currentFolderName, setCurrentFolderName] = useState<string>("");
   // Bumped whenever a book/folder move may have changed a subfolder's
   // contents, so FolderCards refetch their collage/count without a reload.
   const [folderPreviewVersion, setFolderPreviewVersion] = useState<number>(0);
 
   const router = useRouter();
+  const pathname = usePathname();
+
+  // In-collection search state, initialized from the URL so ?q= links are
+  // shareable. Client-side only.
+  const readSearchParams = (): URLSearchParams =>
+    typeof window === "undefined"
+      ? new URLSearchParams()
+      : new URLSearchParams(window.location.search);
+  const [query, setQuery] = useState<string>(
+    () => readSearchParams().get("q") ?? "",
+  );
+
+  // Collapsible search row state. Deep-links with ?q= start open.
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(
+    () => (readSearchParams().get("q") ?? "").trim() !== "",
+  );
+  const searchToggleRef = useRef<HTMLButtonElement>(null);
+
+  // Whole-library search state. `allFolders` is the folder cache: fetched once
+  // per search open (not per keystroke). `debouncedQuery` trails `query` by
+  // ~300ms; the server-side fetch runs against the debounced value.
+  const [debouncedQuery, setDebouncedQuery] = useState<string>(() =>
+    readSearchParams().get("q")?.trim() ?? "",
+  );
+  const [allFolders, setAllFolders] = useState<Folder[] | null>(null);
+  const [globalResults, setGlobalResults] =
+    useState<GlobalSearchResults | null>(null);
+  const [globalLoading, setGlobalLoading] = useState<boolean>(false);
+  const searchSeqRef = useRef(0);
+
+  // Serialize the current view params for URL persistence + folder links.
+  const buildViewQueryString = useCallback((): string => {
+    const params = new URLSearchParams();
+    const trimmedQuery = query.trim();
+    if (trimmedQuery) params.set("q", trimmedQuery);
+    return params.toString();
+  }, [query]);
+
+  const withCurrentQuery = useCallback(
+    (basePath: string): string => {
+      const queryString = buildViewQueryString();
+      return queryString ? `${basePath}?${queryString}` : basePath;
+    },
+    [buildViewQueryString],
+  );
+
+  // Persist q to ? query params without a full reload.
+  const isFirstSyncRef = useRef(true);
+  useEffect(() => {
+    if (isFirstSyncRef.current) {
+      isFirstSyncRef.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      const queryString = buildViewQueryString();
+      router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+        scroll: false,
+      });
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [buildViewQueryString, pathname, router]);
+
+  // Folder cache: single fetch per search open, never per keystroke.
+  useEffect(() => {
+    if (!isSearchOpen || !userId || allFolders !== null) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const folders = await getUserFolders(userId);
+        if (!cancelled) setAllFolders((folders as Folder[]) ?? []);
+      } catch (error) {
+        console.error("Error loading folders for search:", error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSearchOpen, userId, allFolders]);
+
+  // Debounce the raw input ~300ms so the server-side fetch runs settled.
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (trimmed === "") {
+      setDebouncedQuery("");
+      return;
+    }
+    const timer = setTimeout(() => setDebouncedQuery(trimmed), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Whole-library fetch against the debounced query + cached folders.
+  useEffect(() => {
+    if (!isSearchOpen || debouncedQuery.trim() === "" || !userId || !allFolders) {
+      if (debouncedQuery.trim() === "") {
+        setGlobalResults(null);
+        setGlobalLoading(false);
+      }
+      return;
+    }
+    const seq = ++searchSeqRef.current;
+    setGlobalLoading(true);
+    (async () => {
+      try {
+        const results = await searchLibrary(
+          userId,
+          debouncedQuery,
+          allFolders,
+          50,
+        );
+        if (seq !== searchSeqRef.current) return;
+        setGlobalResults(results);
+      } catch (error) {
+        console.error("Global search failed:", error);
+        if (seq === searchSeqRef.current)
+          setGlobalResults({ books: [], folders: [] });
+      } finally {
+        if (seq === searchSeqRef.current) setGlobalLoading(false);
+      }
+    })();
+  }, [debouncedQuery, isSearchOpen, userId, allFolders]);
 
   const resolveFolderPath = useCallback(
     async (userId: string, slugPath: string[]) => {
@@ -100,8 +231,11 @@ export default function Books() {
       const seq = ++fetchSeqRef.current;
       if (!suppressLoading) setIsLoading(true);
       try {
-        let { folderId, breadcrumbs: resolvedBreadcrumbs, directParentId } =
-          await resolveFolderPath(userId, slugPath);
+        let {
+          folderId,
+          breadcrumbs: resolvedBreadcrumbs,
+          directParentId,
+        } = await resolveFolderPath(userId, slugPath);
 
         // For invalid paths, redirect to /books
         if (slugPath.length > 0 && folderId === null) {
@@ -175,7 +309,7 @@ export default function Books() {
 
     if (clickedFolder?.slug) {
       const newPath = [...slugArray, clickedFolder.slug].join("/");
-      router.push(`/books/${newPath}`);
+      router.push(withCurrentQuery(`/books/${newPath}`));
     } else if (folderId) {
       if (breadcrumbs.length > 1) {
         const parentCrumb = breadcrumbs[breadcrumbs.length - 2];
@@ -195,7 +329,7 @@ export default function Books() {
 
     // Handle root
     if (index === -1) {
-      router.push("/books");
+      router.push(withCurrentQuery("/books"));
       return;
     }
     const path = breadcrumbs
@@ -203,7 +337,7 @@ export default function Books() {
       .map((c) => c.slug)
       .filter(Boolean)
       .join("/");
-    router.push(path ? `/books/${path}` : "/books");
+    router.push(withCurrentQuery(path ? `/books/${path}` : "/books"));
   };
 
   const handleCreateFolder = async () => {
@@ -261,6 +395,139 @@ export default function Books() {
     [books, hiddenItemIds],
   );
 
+  const normalizedQuery = query.trim().toLowerCase();
+
+  type ViewBook = Extract<BookOrFolder, { isFolder: false }>;
+  type ViewFolder = Extract<BookOrFolder, { isFolder: true }>;
+
+  const booksInFolder = useMemo<ViewBook[]>(
+    () =>
+      visibleBooks.filter((item): item is ViewBook => !item.isFolder),
+    [visibleBooks],
+  );
+
+  // Books filter by title/author (case-insensitive) and stay in server
+  // sort_order (Custom order). Folders filter by name and stay in
+  // sort_order/name order.
+  const displayBooks = useMemo<ViewBook[]>(() => {
+    const booksOnly = visibleBooks.filter(
+      (item): item is ViewBook => !item.isFolder,
+    );
+    if (normalizedQuery === "") return booksOnly;
+    return booksOnly.filter((book) =>
+      `${book.title ?? ""} ${book.author ?? ""}`
+        .toLowerCase()
+        .includes(normalizedQuery),
+    );
+  }, [visibleBooks, normalizedQuery]);
+
+  // Folders filter by name only and always stay at the top in custom order.
+  const displayFolders = useMemo<ViewFolder[]>(() => {
+    const folders = visibleBooks.filter(
+      (item): item is ViewFolder => item.isFolder === true,
+    );
+    const filtered =
+      normalizedQuery === ""
+        ? [...folders]
+        : folders.filter((folder) =>
+            (folder.name ?? "").toLowerCase().includes(normalizedQuery),
+          );
+    filtered.sort(
+      (a, b) =>
+        (a.sort_order ?? Number.MAX_SAFE_INTEGER) -
+          (b.sort_order ?? Number.MAX_SAFE_INTEGER) ||
+        (a.name ?? "").localeCompare(b.name ?? ""),
+    );
+    return filtered;
+  }, [visibleBooks, normalizedQuery]);
+
+  const displayItems = useMemo<BookOrFolder[]>(
+    () => [...displayFolders, ...displayBooks],
+    [displayFolders, displayBooks],
+  );
+
+  const isSearching = isSearchOpen && normalizedQuery !== "";
+
+  // Global-results derived state. `showGlobalResults` flips on only after the
+  // first debounced fetch lands so the underlying folder stays visible
+  // meanwhile (stale results stay up while a newer query loads).
+  const isDebouncing = isSearching && query.trim() !== debouncedQuery;
+  const isFoldersLoading = isSearching && allFolders === null;
+  const isGlobalPending = isSearching && (isDebouncing || globalLoading || isFoldersLoading);
+  const showGlobalResults = isSearching && globalResults !== null;
+  const globalCount = showGlobalResults
+    ? globalResults.folders.length + globalResults.books.length
+    : 0;
+  const toolbarResultCount = showGlobalResults ? globalCount : displayItems.length;
+
+  // Persisting a filtered subset would corrupt custom order, so dragging
+  // pauses while searching and items render as static cards.
+  const booksDragDisabled = isSearching;
+  const foldersDragDisabled = isSearching;
+
+  const dragDisabledNotice: string | null = isSearching
+    ? "Drag-and-drop is paused while searching. Clear the search to reorder."
+    : null;
+
+  const resetGlobalSearchState = useCallback(() => {
+    searchSeqRef.current++;
+    setDebouncedQuery("");
+    setGlobalResults(null);
+    setGlobalLoading(false);
+  }, []);
+
+  // Empty-state action: clear the text but keep the row open for a new query.
+  const clearSearch = useCallback(() => {
+    setQuery("");
+    resetGlobalSearchState();
+    requestAnimationFrame(() => {
+      document.getElementById("dashboard-search-input")?.focus();
+    });
+  }, [resetGlobalSearchState]);
+
+  // Collapsing the row always clears the query (and the ?q= param via the
+  // debounced sync above) so full drag-and-drop is restored.
+  const closeSearch = useCallback(() => {
+    setQuery("");
+    setIsSearchOpen(false);
+    resetGlobalSearchState();
+    setAllFolders(null);
+  }, [resetGlobalSearchState]);
+
+  const toggleSearch = useCallback(() => {
+    if (isSearchOpen) {
+      setQuery("");
+      setIsSearchOpen(false);
+      resetGlobalSearchState();
+      setAllFolders(null);
+    } else {
+      setIsSearchOpen(true);
+    }
+  }, [isSearchOpen, resetGlobalSearchState]);
+
+  // X / Escape close: return focus to the toggle for keyboard users.
+  const handleSearchClose = useCallback(() => {
+    closeSearch();
+    requestAnimationFrame(() => {
+      searchToggleRef.current?.focus();
+    });
+  }, [closeSearch]);
+
+  // Global folder rows navigate INTO the folder via its slug path and clear
+  // search (unlike in-folder navigation, the query is never preserved).
+  const handleGlobalFolderClick = useCallback(
+    (folderId: string) => {
+      const target = globalResults?.folders.find((f) => f.id === folderId);
+      const slugPath = target?.slugPath ?? "";
+      setQuery("");
+      setIsSearchOpen(false);
+      resetGlobalSearchState();
+      setAllFolders(null);
+      router.push(slugPath ? `/books/${slugPath}` : "/books");
+    },
+    [globalResults, resetGlobalSearchState, router],
+  );
+
   // Refresh while optionally hiding a single item (used for drag/drop)
   const refreshAndHide = async (hideId?: string) => {
     if (!userId) return;
@@ -306,12 +573,15 @@ export default function Books() {
           .replace(/(^-|-$)+/g, ""); // trim hyphens
         const newSlugArray = [...slugArray];
         newSlugArray[newSlugArray.length - 1] = newSlug;
-        const newPath = newSlugArray.join('/');
-        router.push(newPath ? `/books/${newPath}` : '/books');
+        const newPath = newSlugArray.join("/");
+        router.push(newPath ? `/books/${newPath}` : "/books");
       }
       setIsFolderModalOpen(false);
     } catch (error) {
-      console.error(`Error ${folderModalMode === "create" ? "creating" : "renaming"} folder:`, error);
+      console.error(
+        `Error ${folderModalMode === "create" ? "creating" : "renaming"} folder:`,
+        error,
+      );
       alert(
         `Failed to ${folderModalMode === "create" ? "create" : "rename"} folder. ${error instanceof Error ? error.message : "Unknown error"}`,
       );
@@ -362,10 +632,11 @@ export default function Books() {
                       )}
                       <button
                         onClick={() => handleBreadcrumbClick(crumb)}
-                        className={`text-sm font-medium ${index === breadcrumbs.length - 1
-                          ? "text-foreground cursor-default"
-                          : "text-grey2 hover:text-primary "
-                          }`}
+                        className={`text-sm font-medium ${
+                          index === breadcrumbs.length - 1
+                            ? "text-foreground cursor-default"
+                            : "text-grey2 hover:text-primary "
+                        }`}
                         disabled={index === breadcrumbs.length - 1}
                       >
                         {crumb.name}
@@ -439,7 +710,7 @@ export default function Books() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={handleCreateFolder}
             disabled={isLoading || isDeleting || !currentFolderId}
@@ -461,19 +732,156 @@ export default function Books() {
           >
             Add Books
           </Link>
+
+          {/* Search toggle — expands the search row below */}
+          <button
+            ref={searchToggleRef}
+            type="button"
+            onClick={toggleSearch}
+            aria-expanded={isSearchOpen}
+            aria-label={isSearchOpen ? "Close search" : "Open search"}
+            title={isSearchOpen ? "Close search" : "Search your library"}
+            className={`ml-auto inline-flex items-center gap-2 rounded-md px-4 py-2 text-lg font-medium shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
+              isSearchOpen
+                ? "bg-primary/10 text-primary"
+                : "border border-grey4 bg-background text-foreground hover:bg-muted"
+            }`}
+          >
+            <Search className="h-5 w-5" aria-hidden="true" />
+            <span className="hidden sm:inline">Search</span>
+          </button>
         </div>
+
+        {/* Collapsible search row */}
+        <AnimatePresence initial={false}>
+          {isSearchOpen && (
+            <motion.div
+              key="dashboard-search"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2 }}
+            >
+              <BookToolbar
+                query={query}
+                onQueryChange={setQuery}
+                onClose={handleSearchClose}
+                resultCount={toolbarResultCount}
+                totalCount={visibleBooks.length}
+                isSearching={isSearching}
+                isGlobal
+                isLoading={isGlobalPending}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Content Area */}
         {isLoading || !hasLoaded ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-12 w-12 text-primary animate-spin" />
           </div>
-        ) : (
-          <div className="space-y-6">
+        ) : isSearching ? (
+          showGlobalResults ? (
+            globalCount === 0 && !isGlobalPending ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-xl font-semibold text-foreground">
+                  No matches in your library
+                </p>
+                <p className="mt-1 text-sm text-grey2">
+                  Try a different search or clear the search.
+                </p>
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  className="mt-4 inline-flex items-center px-4 py-2 rounded-md shadow-sm text-sm font-medium text-foreground bg-primary duration-200 ease-in-out cursor-pointer transform hover:scale-105 transition-transform will-change-transform"
+                >
+                  Clear search
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-6" aria-label="Library search results">
+                {dragDisabledNotice && (
+                  <div
+                    role="note"
+                    title={dragDisabledNotice}
+                    className="mb-4 flex items-start gap-2 rounded-md border border-grey4 bg-background px-3 py-2 text-xs text-grey2"
+                  >
+                    <Lock
+                      className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <span>{dragDisabledNotice}</span>
+                  </div>
+                )}
+                {isGlobalPending && (
+                  <div
+                    className="flex items-center gap-2 text-sm text-grey2"
+                    role="status"
+                    aria-live="polite"
+                    aria-label="Searching your library"
+                  >
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                    <span>Searching your library…</span>
+                  </div>
+                )}
+                {globalResults!.folders.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5">
+                    {globalResults!.folders.map((folder) => (
+                      <div key={folder.id} className="min-w-0">
+                        <FolderCard
+                          folder={folder}
+                          dragDisabled
+                          refreshKey={folderPreviewVersion}
+                          onFolderClick={(id: string) =>
+                            handleGlobalFolderClick(id)
+                          }
+                        />
+                        <p
+                          className="mt-1 truncate text-[11px] text-grey2"
+                          title={`in ${folder.locationPath}`}
+                        >
+                          in {folder.locationPath}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {globalResults!.folders.length > 0 &&
+                  globalResults!.books.length > 0 && <div className="h-6" />}
+                {globalResults!.books.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3">
+                    {globalResults!.books.map((book) => (
+                      <div key={book.id} className="min-w-0">
+                        <BookCard book={book} sortable={false} />
+                        <p
+                          className="mt-1 truncate text-[11px] text-grey2"
+                          title={`in ${book.locationPath}`}
+                        >
+                          in {book.locationPath}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          ) : (
+            // First debounced fetch still pending: keep the exact folder view
+            // visible with a small spinner until global results arrive.
             <div className="space-y-4">
-              {
-                // Hide any items that are currently being hidden during a drag/drop refresh
-              }
+              <div
+                className="flex items-center gap-2 text-sm text-grey2"
+                role="status"
+                aria-live="polite"
+                aria-label="Searching your library"
+              >
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                <span>Searching your library…</span>
+              </div>
               <BookList
                 items={visibleBooks}
                 onFolderClick={handleFolderClick}
@@ -488,6 +896,47 @@ export default function Books() {
                 breadcrumbs={breadcrumbs}
                 isRoot={isRoot}
                 refreshKey={folderPreviewVersion}
+                booksDragDisabled={booksDragDisabled}
+                foldersDragDisabled={foldersDragDisabled}
+                dragDisabledNotice={dragDisabledNotice}
+              />
+            </div>
+          )
+        ) : books.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center text-grey2">
+            <div className="text-3xl font-bold mb-4">
+              Add some books to your collection to get started!
+            </div>
+            <Link
+              href="/search"
+              className="mt-2 inline-block px-6 py-3 rounded-md shadow-sm text-lg leading-none text-foreground bg-primary hover:bg-primary/80  duration-200 ease-in-out cursor-pointer transform hover:scale-105 transition-transform will-change-transform"
+            >
+              <span className="block">Get Started!</span>
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              {
+                // Hide any items that are currently being hidden during a drag/drop refresh
+              }
+              <BookList
+                items={displayItems}
+                onFolderClick={handleFolderClick}
+                folderId={currentFolderId}
+                parentFolderId={parentFolderId}
+                parentFolderSlug={
+                  breadcrumbs.length > 1
+                    ? breadcrumbs[breadcrumbs.length - 2].slug
+                    : null
+                }
+                onRefresh={(hideId?: string) => refreshAndHide(hideId)}
+                breadcrumbs={breadcrumbs}
+                isRoot={isRoot}
+                refreshKey={folderPreviewVersion}
+                booksDragDisabled={booksDragDisabled}
+                foldersDragDisabled={foldersDragDisabled}
+                dragDisabledNotice={dragDisabledNotice}
               />
               {/* BookList renders nothing at root when empty, but in a
                * subfolder it still shows the "go up" button — so an empty
@@ -514,7 +963,9 @@ export default function Books() {
         isOpen={isFolderModalOpen}
         onClose={() => setIsFolderModalOpen(false)}
         onConfirm={handleFolderModalConfirm}
-        title={folderModalMode === "create" ? "Create New Folder" : "Rename Folder"}
+        title={
+          folderModalMode === "create" ? "Create New Folder" : "Rename Folder"
+        }
         confirmButtonText={folderModalMode === "create" ? "Create" : "Rename"}
         initialName={currentFolderName}
         isLoading={isLoading}
