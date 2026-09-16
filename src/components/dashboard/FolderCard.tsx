@@ -27,6 +27,12 @@ interface FolderCardProps {
    * droppable target so books can be moved up one level.
    */
   droppableId?: string | null;
+  /**
+   * Bumped by the parent whenever folder contents may have changed
+   * (e.g. a book was moved into a subfolder). Triggers a refetch of the
+   * collage/count so the icon updates without a full page reload.
+   */
+  refreshKey?: number;
 }
 
 export default function FolderCard({
@@ -36,17 +42,25 @@ export default function FolderCard({
   highlighted = false,
   droppableId = null,
   placeholder = false,
+  refreshKey = 0,
 }: FolderCardProps) {
   const [books, setBooks] = useState<Book[]>([]);
 
   useEffect(() => {
     // Only fetch books if it's not the 'back' folder representation
-    if (folder.parent_id !== null) {
-      getBooksInFolder(folder.id, folder.user_id).then((books) => {
-        setBooks(books);
-      });
+    if (folder.parent_id === null) {
+      return;
     }
-  }, [folder.id, folder.user_id, folder.parent_id]);
+    let cancelled = false;
+    getBooksInFolder(folder.id, folder.user_id).then((books) => {
+      if (!cancelled) {
+        setBooks(books);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [folder.id, folder.user_id, folder.parent_id, refreshKey]);
 
   const sortableState = useSortable({
     id: folder.id,

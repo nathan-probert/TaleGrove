@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   closestCenter,
+  CollisionDetection,
   defaultAnnouncements,
   DndContext,
   DragEndEvent,
@@ -10,6 +11,7 @@ import {
   DragStartEvent,
   KeyboardSensor,
   PointerSensor,
+  pointerWithin,
   TouchSensor,
   useSensor,
   useSensors,
@@ -39,6 +41,8 @@ interface Props {
   onRefresh: (hideId?: string) => void;
   breadcrumbs?: { id: string | null; name: string; slug: string | null }[];
   isRoot: boolean;
+  /** Bumped when subfolder contents may have changed: forwarded to FolderCards so their collage/count refetches. */
+  refreshKey?: number;
 }
 
 type SortableFolder = Folder & { isFolder: true };
@@ -57,6 +61,30 @@ const screenReaderInstructions = {
     "To pick up an item, press space. Use the arrow keys to reorder it, space again to drop, and escape to cancel.",
 };
 
+/**
+ * Pointer-first collision detection. closestCenter compares the dragged
+ * card's *center* against droppable centers — but the card follows the
+ * pointer with a grab offset, so on dense grids the resolved target
+ * routinely mismatched the cursor: the wrong folder highlighted, and the
+ * highlight could stay stuck on a folder after dragging back over the
+ * books (leaving the dragged cell hidden with no reorder preview).
+ * pointerWithin matches what the cursor is actually over; closestCenter is
+ * only a fallback for keyboard drags, which have no pointer coordinates.
+ * The active item itself is excluded so the pointer resting on the dragged
+ * card can't resolve `over` to itself and freeze updates.
+ */
+const collisionDetection: CollisionDetection = (args) => {
+  const activeId = String(args.active.id);
+  const excludeActive = (
+    collisions: ReturnType<CollisionDetection>,
+  ): ReturnType<CollisionDetection> =>
+    collisions.filter((collision) => String(collision.id) !== activeId);
+  if (args.pointerCoordinates) {
+    return excludeActive(pointerWithin(args));
+  }
+  return excludeActive(closestCenter(args));
+};
+
 export default function BookList({
   items,
   onFolderClick,
@@ -66,6 +94,7 @@ export default function BookList({
   onRefresh,
   breadcrumbs = [],
   isRoot,
+  refreshKey = 0,
 }: Props) {
   const parentCrumb = breadcrumbs[breadcrumbs.length - 2];
 
@@ -439,7 +468,7 @@ export default function BookList({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={collisionDetection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
@@ -492,6 +521,7 @@ export default function BookList({
                     movedAwayIds.includes(folder.id) ||
                     folder.id === hiddenDragFolderId
                   }
+                  refreshKey={refreshKey}
                   onFolderClick={(id: string) => {
                     if (id === "__go_up__") {
                       if (parentCrumb) {
