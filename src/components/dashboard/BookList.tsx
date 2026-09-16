@@ -25,7 +25,6 @@ import {
 import { BookOrFolder, Folder } from "@/types";
 import FolderCard from "@/components/dashboard/FolderCard";
 import BookCard from "./BookCard";
-import { Lock } from "lucide-react";
 import {
   addBookToFolder,
   addFolderToFolder,
@@ -49,8 +48,6 @@ interface Props {
   booksDragDisabled?: boolean;
   /** true while searching: folder drag is paused. */
   foldersDragDisabled?: boolean;
-  /** Read-only explanation shown when any dragging is paused. */
-  dragDisabledNotice?: string | null;
 }
 
 type SortableFolder = Folder & { isFolder: true };
@@ -105,7 +102,6 @@ export default function BookList({
   refreshKey = 0,
   booksDragDisabled = false,
   foldersDragDisabled = false,
-  dragDisabledNotice = null,
 }: Props) {
   const parentCrumb = breadcrumbs[breadcrumbs.length - 2];
 
@@ -491,16 +487,6 @@ export default function BookList({
       }}
     >
       <div onClickCapture={handleClickCapture}>
-        {(booksDragDisabled || foldersDragDisabled) && dragDisabledNotice && (
-          <div
-            role="note"
-            title={dragDisabledNotice}
-            className="mb-4 flex items-start gap-2 rounded-md border border-grey4 bg-background px-3 py-2 text-xs text-grey2"
-          >
-            <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span>{dragDisabledNotice}</span>
-          </div>
-        )}
         {error && (
           <div
             role="alert"
