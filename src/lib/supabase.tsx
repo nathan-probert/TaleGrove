@@ -366,12 +366,38 @@ export async function getFoldersFromBook(bookId: string, userId: string) {
   return data?.map((entry) => entry.folders as unknown as Folder) ?? [];
 }
 
+export async function getDirectSubfolders(
+  folderId: string,
+  userId: string,
+): Promise<Folder[]> {
+  const { data, error } = await supabase
+    .from("folders")
+    .select("*")
+    .eq("parent_id", folderId)
+    .eq("user_id", userId)
+    .order("sort_order", { ascending: true, nullsFirst: false });
+
+  if (error) throw error;
+  return (data ?? []) as Folder[];
+}
+
 export async function deleteFolder(folderId: string, userId: string) {
   // get books in the folder to be deleted
   const books = await getBooksInFolder(folderId, userId);
   if (books.length > 0) {
     throw new Error(
       "Cannot delete folder with books in it. Please remove the books first.",
+    );
+  }
+
+  // Guard against silent cascade-orphaning: folders.parent_id is
+  // ON DELETE CASCADE, so deleting a parent would auto-delete subfolders
+  // (and cascade away their folder_books links, orphaning their books).
+  // Callers must use moveFolderContentsToParent / deleteFolderRecursive.
+  const subfolders = await getDirectSubfolders(folderId, userId);
+  if (subfolders.length > 0) {
+    throw new Error(
+      "Cannot delete folder with subfolders in it. Please move or delete the contents first.",
     );
   }
 
@@ -382,6 +408,196 @@ export async function deleteFolder(folderId: string, userId: string) {
     .eq("user_id", userId);
 
   if (error) throw error;
+  return true;
+}
+
+/**
+ * Move a folder's direct contents (books + direct subfolders) up to its
+ * parent, then delete the now-empty folder.
+ *
+ * Multi-folder book semantics: books are linked via folder_books with a
+ * UNIQUE(folder_id, book_id) constraint. A book shelved in the deleted
+ * folder AND elsewhere keeps its other links — we upsert into the parent
+ * (no-op if already there) and only remove the deleted folder's link.
+ */
+export async function moveFolderContentsToParent(
+  folderId: string,
+  parentId: string | null,
+  userId: string,
+): Promise<boolean> {
+  if (!parentId) {
+    throw new Error("Cannot move contents: parent folder is missing.");
+  }
+  if (folderId === parentId) {
+    throw new Error("Cannot move a folder's contents into itself.");
+  }
+
+  // Move direct books: bulk upsert into parent (respects the
+  // UNIQUE(folder_id, book_id) constraint — already-shelved books are a
+  // harmless no-op), then drop this folder's links.
+  const { data: links, error: linksError } = await supabase
+    .from("folder_books")
+    .select("book_id")
+    .eq("folder_id", folderId)
+    .eq("user_id", userId);
+
+  if (linksError) throw linksError;
+
+  const bookIds = (links ?? []).map((r) => r.book_id as string);
+  if (bookIds.length > 0) {
+    const upserts = bookIds.map((book_id) => ({
+      book_id,
+      folder_id: parentId,
+      user_id: userId,
+    }));
+    const { error: upsertError } = await supabase
+      .from("folder_books")
+      .upsert(upserts, { onConflict: "folder_id,book_id" });
+    if (upsertError) throw upsertError;
+
+    const { error: deleteLinksError } = await supabase
+      .from("folder_books")
+      .delete()
+      .eq("folder_id", folderId)
+      .eq("user_id", userId);
+    if (deleteLinksError) throw deleteLinksError;
+  }
+
+  // Re-parent direct subfolders to the parent (bulk = per-folder
+  // addFolderToFolder semantics in one query).
+  const { error: reparentError } = await supabase
+    .from("folders")
+    .update({ parent_id: parentId })
+    .eq("parent_id", folderId)
+    .eq("user_id", userId);
+  if (reparentError) throw reparentError;
+
+  // Folder is now empty — safe to delete.
+  const { error: deleteError } = await supabase
+    .from("folders")
+    .delete()
+    .eq("id", folderId)
+    .eq("user_id", userId);
+  if (deleteError) throw deleteError;
+  return true;
+}
+
+/**
+ * Destructively delete a folder, its subfolders (deepest-first), its
+ * folder_books links, and any books left with ZERO remaining folder links.
+ * Books still shelved outside the deleted subtree are NEVER deleted — only
+ * their in-subtree links go away (via book delete cascade / folder delete
+ * cascade).
+ *
+ * Explicit deepest-first ordering in code so this stays correct even if the
+ * folders.parent_id ON DELETE CASCADE FK is ever changed to RESTRICT.
+ */
+export async function deleteFolderRecursive(
+  folderId: string,
+  userId: string,
+): Promise<boolean> {
+  // Collect the full descendant subtree from the user's folder list.
+  const { data: allFolders, error: foldersError } = await supabase
+    .from("folders")
+    .select("id, parent_id")
+    .eq("user_id", userId);
+  if (foldersError) throw foldersError;
+
+  const rows = (allFolders ?? []) as { id: string; parent_id: string | null }[];
+  const idSet = new Set(rows.map((r) => r.id));
+  if (!idSet.has(folderId)) {
+    throw new Error("Folder not found.");
+  }
+
+  const childrenByParent = new Map<string, string[]>();
+  for (const r of rows) {
+    if (r.parent_id === null) continue;
+    const list = childrenByParent.get(r.parent_id) ?? [];
+    list.push(r.id);
+    childrenByParent.set(r.parent_id, list);
+  }
+
+  const subtreeIds: string[] = [];
+  const depth = new Map<string, number>();
+  const stack: string[] = [folderId];
+  depth.set(folderId, 0);
+  while (stack.length > 0) {
+    const current = stack.pop() as string;
+    subtreeIds.push(current);
+    const currentDepth = depth.get(current) ?? 0;
+    for (const child of childrenByParent.get(current) ?? []) {
+      if (depth.has(child)) continue; // cycle guard
+      depth.set(child, currentDepth + 1);
+      stack.push(child);
+    }
+  }
+  const subtreeSet = new Set(subtreeIds);
+
+  // All book links touching the subtree.
+  const { data: subtreeLinks, error: subtreeLinksError } = await supabase
+    .from("folder_books")
+    .select("book_id, folder_id")
+    .eq("user_id", userId)
+    .in("folder_id", subtreeIds);
+  if (subtreeLinksError) throw subtreeLinksError;
+
+  const touchedBookIds = Array.from(
+    new Set(
+      ((subtreeLinks ?? []) as { book_id: string; folder_id: string }[]).map(
+        (r) => r.book_id,
+      ),
+    ),
+  );
+
+  // Of those books, which have links OUTSIDE the subtree? Single grouped
+  // query instead of N per-book lookups.
+  let orphanBookIds: string[] = [];
+  if (touchedBookIds.length > 0) {
+    const { data: allLinks, error: allLinksError } = await supabase
+      .from("folder_books")
+      .select("book_id, folder_id")
+      .eq("user_id", userId)
+      .in("book_id", touchedBookIds);
+    if (allLinksError) throw allLinksError;
+
+    const foldersByBook = new Map<string, string[]>();
+    for (const r of (allLinks ?? []) as {
+      book_id: string;
+      folder_id: string;
+    }[]) {
+      const list = foldersByBook.get(r.book_id) ?? [];
+      list.push(r.folder_id);
+      foldersByBook.set(r.book_id, list);
+    }
+    orphanBookIds = touchedBookIds.filter((bookId) =>
+      (foldersByBook.get(bookId) ?? []).every((fid) => subtreeSet.has(fid)),
+    );
+  }
+
+  // Delete orphaned books first (their folder_books rows cascade away).
+  // Non-orphans keep their outside links; their in-subtree links die with
+  // the folders below.
+  if (orphanBookIds.length > 0) {
+    const { error: deleteBooksError } = await supabase
+      .from("books")
+      .delete()
+      .eq("user_id", userId)
+      .in("id", orphanBookIds);
+    if (deleteBooksError) throw deleteBooksError;
+  }
+
+  // Deepest-first folder deletion — children before parents.
+  const deepestFirst = [...subtreeIds].sort(
+    (a, b) => (depth.get(b) ?? 0) - (depth.get(a) ?? 0),
+  );
+  for (const id of deepestFirst) {
+    const { error: deleteFolderError } = await supabase
+      .from("folders")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId);
+    if (deleteFolderError) throw deleteFolderError;
+  }
   return true;
 }
 

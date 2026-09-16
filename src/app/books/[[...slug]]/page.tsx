@@ -14,16 +14,23 @@ import {
 import supabase, {
   createFolder,
   getRootId,
-  deleteFolder,
   getCurrentUser,
   getUserFolders,
   updateFolderName,
+  getBooksInFolder,
+  getDirectSubfolders,
+  moveFolderContentsToParent,
+  deleteFolderRecursive,
 } from "@/lib/supabase";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { Loader2, Lock, Search, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FolderNameModal } from "@/components/Modals/FolderNameModal";
+import {
+  DeleteFolderModal,
+  type DeleteFolderMode,
+} from "@/components/Modals/DeleteFolderModal";
 
 export default function Books() {
   const params = useParams();
@@ -50,6 +57,14 @@ export default function Books() {
   const [isRoot, setIsRoot] = useState<boolean>(false);
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const [isFolderModalOpen, setIsFolderModalOpen] = useState<boolean>(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  const [deleteCounts, setDeleteCounts] = useState<{
+    books: number;
+    subfolders: number;
+  } | null>(null);
+  const [deleteCountsLoading, setDeleteCountsLoading] =
+    useState<boolean>(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [folderModalMode, setFolderModalMode] = useState<"create" | "rename">(
     "create",
   );
@@ -351,7 +366,7 @@ export default function Books() {
     setIsFolderModalOpen(true);
   };
 
-  const handleDeleteFolder = async () => {
+  const handleDeleteClick = async () => {
     if (!userId || !currentFolderId || isRoot) {
       console.error(
         "Cannot delete: User not logged in, folder ID missing, or trying to delete root.",
@@ -359,17 +374,58 @@ export default function Books() {
       return;
     }
 
-    const currentFolderName =
-      breadcrumbs[breadcrumbs.length - 1]?.name || "this folder";
-    const confirmation = window.confirm(
-      `Are you sure you want to delete "${currentFolderName}" and all its contents? This action cannot be undone.`,
-    );
-    if (!confirmation) return;
+    setDeleteError(null);
+    setDeleteCounts(null);
+    setIsDeleteModalOpen(true);
+    setDeleteCountsLoading(true);
+    try {
+      const [booksInFolder, subfolders] = await Promise.all([
+        getBooksInFolder(currentFolderId, userId),
+        getDirectSubfolders(currentFolderId, userId),
+      ]);
+      setDeleteCounts({
+        books: booksInFolder.length,
+        subfolders: subfolders.length,
+      });
+    } catch (error) {
+      console.error("Error loading folder contents:", error);
+      setDeleteError(
+        `Could not load folder contents. ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+      setDeleteCounts({ books: 0, subfolders: 0 });
+    } finally {
+      setDeleteCountsLoading(false);
+    }
+  };
+
+  const handleDeleteConfirm = async (mode: DeleteFolderMode) => {
+    if (!userId || !currentFolderId || isRoot) {
+      console.error(
+        "Cannot delete: User not logged in, folder ID missing, or trying to delete root.",
+      );
+      return;
+    }
 
     setIsDeleting(true);
-    setIsLoading(true);
+    setDeleteError(null);
     try {
-      await deleteFolder(currentFolderId, userId);
+      if (mode === "move") {
+        let targetParentId = parentFolderId;
+        if (!targetParentId) {
+          targetParentId = await getRootId(userId);
+        }
+        if (!targetParentId) {
+          throw new Error("Parent folder not found.");
+        }
+        await moveFolderContentsToParent(
+          currentFolderId,
+          targetParentId,
+          userId,
+        );
+      } else {
+        await deleteFolderRecursive(currentFolderId, userId);
+      }
+      setIsDeleteModalOpen(false);
       const parentCrumb = breadcrumbs[breadcrumbs.length - 2];
       if (parentCrumb) {
         handleBreadcrumbClick(parentCrumb);
@@ -378,13 +434,18 @@ export default function Books() {
       }
     } catch (error) {
       console.error("Error deleting folder:", error);
-      alert(
+      setDeleteError(
         `Failed to delete folder. ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     } finally {
       setIsDeleting(false);
-      setIsLoading(false);
     }
+  };
+
+  const handleDeleteModalClose = () => {
+    if (isDeleting) return;
+    setIsDeleteModalOpen(false);
+    setDeleteError(null);
   };
 
   // Stable identity across unrelated re-renders so BookList's optimistic
@@ -688,7 +749,7 @@ export default function Books() {
               </button>
               {/* Existing Delete Button */}
               <button
-                onClick={handleDeleteFolder}
+                onClick={handleDeleteClick}
                 disabled={isLoading || isDeleting}
                 className="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
                 title={`Delete folder: ${breadcrumbs[breadcrumbs.length - 1]?.name}`}
@@ -969,6 +1030,23 @@ export default function Books() {
         confirmButtonText={folderModalMode === "create" ? "Create" : "Rename"}
         initialName={currentFolderName}
         isLoading={isLoading}
+      />
+
+      <DeleteFolderModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleDeleteModalClose}
+        onConfirm={handleDeleteConfirm}
+        folderName={breadcrumbs[breadcrumbs.length - 1]?.name || "this folder"}
+        parentName={
+          breadcrumbs.length > 1
+            ? breadcrumbs[breadcrumbs.length - 2]?.name || "parent folder"
+            : "parent folder"
+        }
+        bookCount={deleteCounts?.books ?? 0}
+        subfolderCount={deleteCounts?.subfolders ?? 0}
+        countsLoading={deleteCountsLoading}
+        isLoading={isDeleting}
+        error={deleteError}
       />
     </div>
   );
