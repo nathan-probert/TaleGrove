@@ -1,7 +1,8 @@
 #!/bin/sh
 # post-checkout hook: auto-copy .env* from the main worktree into a
 # newly created / checked-out worktree. Never overwrites existing files.
-# Installed to the shared hooks dir (<repo>/.git/hooks), so it applies to
+# Installed to the shared hooks dir (<repo>/.git/hooks) by
+# `sh scripts/setup.sh` (or `npm run setup`), so it applies to
 # all worktrees of this repo. Always exits 0 so it never blocks checkout.
 #
 # Git calls this as: post-checkout <old-head> <new-head> <branch-flag>
@@ -23,12 +24,12 @@ fi
 # Fallback (e.g. script not yet checked out): inline copy from main
 COMMON="$(git rev-parse --git-common-dir 2>/dev/null || echo ".git")"
 case "$COMMON" in
-  /*) ;;
+  /*|?:/*|?:\\*|\\\\*) ;;
   *) COMMON="$TOPLEVEL/$COMMON" ;;
 esac
 MAIN="$(dirname "$COMMON")"
 if [ "$TOPLEVEL" != "$MAIN" ]; then
-  for f in .env .env.local .env.development .env.development.local; do
+  for f in .env.local .env .env.development .env.development.local; do
     if [ -f "$MAIN/$f" ] && [ ! -e "$TOPLEVEL/$f" ]; then
       cp "$MAIN/$f" "$TOPLEVEL/$f" 2>/dev/null || true
     fi
