@@ -22,6 +22,9 @@ interface FolderCardProps {
    *  close as if already moved, while the sortable node stays mounted and
    *  registered so the in-flight drag (and its data) survives. */
   placeholder?: boolean;
+  /** true while searching: dragging is paused so a filtered subset can
+   *  never be persisted. */
+  dragDisabled?: boolean;
   /**
    * When provided (used for the "go up" button), registers an additional
    * droppable target so books can be moved up one level.
@@ -43,6 +46,7 @@ export default function FolderCard({
   droppableId = null,
   placeholder = false,
   refreshKey = 0,
+  dragDisabled = false,
 }: FolderCardProps) {
   const [books, setBooks] = useState<Book[]>([]);
 
@@ -65,7 +69,7 @@ export default function FolderCard({
   const sortableState = useSortable({
     id: folder.id,
     data: { type: "folder", folder },
-    disabled: !sortable,
+    disabled: !sortable || dragDisabled,
   });
 
   const droppableState = useDroppable({
@@ -153,24 +157,17 @@ export default function FolderCard({
   if (!sortable) {
     // "Go up" pseudo-folder: clickable + droppable for books, never draggable.
     return (
-      <div
-        ref={droppableState.setNodeRef}
-        className="h-full outline-none"
-      >
+      <div ref={droppableState.setNodeRef} className="h-full outline-none">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
           onClick={handleClick}
           className={`group relative flex flex-col h-full rounded-lg bg-background shadow-sm border overflow-hidden transition-shadow cursor-pointer hover:shadow-md ${
-            highlight
-              ? "border-primary ring-2 ring-primary"
-              : "border-primary"
+            highlight ? "border-primary ring-2 ring-primary" : "border-primary"
           }`}
           style={{
-            backgroundColor: highlight
-              ? "var(--grey5)"
-              : "var(--background)",
+            backgroundColor: highlight ? "var(--grey5)" : "var(--background)",
           }}
         >
           {content}
@@ -179,8 +176,14 @@ export default function FolderCard({
     );
   }
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    sortableState;
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = sortableState;
 
   return (
     <div
@@ -194,9 +197,9 @@ export default function FolderCard({
       }}
       {...attributes}
       {...listeners}
-      className={`h-full cursor-grab active:cursor-grabbing outline-none ${
-        placeholder ? "hidden" : ""
-      }`}
+      className={`h-full outline-none ${
+        dragDisabled ? "cursor-default" : "cursor-grab active:cursor-grabbing"
+      } ${placeholder ? "hidden" : ""}`}
     >
       <motion.div
         initial={{ opacity: 0, y: 10 }}

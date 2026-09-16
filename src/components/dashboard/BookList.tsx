@@ -25,6 +25,7 @@ import {
 import { BookOrFolder, Folder } from "@/types";
 import FolderCard from "@/components/dashboard/FolderCard";
 import BookCard from "./BookCard";
+import { Lock } from "lucide-react";
 import {
   addBookToFolder,
   addFolderToFolder,
@@ -43,6 +44,13 @@ interface Props {
   isRoot: boolean;
   /** Bumped when subfolder contents may have changed: forwarded to FolderCards so their collage/count refetches. */
   refreshKey?: number;
+  /** true while searching: book drag is paused so a filtered subset can
+   *  never be persisted. Books render as static cards. */
+  booksDragDisabled?: boolean;
+  /** true while searching: folder drag is paused. */
+  foldersDragDisabled?: boolean;
+  /** Read-only explanation shown when any dragging is paused. */
+  dragDisabledNotice?: string | null;
 }
 
 type SortableFolder = Folder & { isFolder: true };
@@ -95,6 +103,9 @@ export default function BookList({
   breadcrumbs = [],
   isRoot,
   refreshKey = 0,
+  booksDragDisabled = false,
+  foldersDragDisabled = false,
+  dragDisabledNotice = null,
 }: Props) {
   const parentCrumb = breadcrumbs[breadcrumbs.length - 2];
 
@@ -113,11 +124,13 @@ export default function BookList({
 
   const splitItems = (list: BookOrFolder[]) => ({
     folders: list.filter((i): i is SortableFolder => i.isFolder),
-    books: list.filter((i): i is BookOrFolder & { isFolder: false } => !i.isFolder),
+    books: list.filter(
+      (i): i is BookOrFolder & { isFolder: false } => !i.isFolder,
+    ),
   });
 
-  const [orderedFolders, setOrderedFolders] = useState<SortableFolder[]>(() =>
-    splitItems(items).folders,
+  const [orderedFolders, setOrderedFolders] = useState<SortableFolder[]>(
+    () => splitItems(items).folders,
   );
   const [orderedBooks, setOrderedBooks] = useState<
     (BookOrFolder & { isFolder: false })[]
@@ -300,7 +313,10 @@ export default function BookList({
     const activeType = active.data.current?.type as string | undefined;
     const overType = over.data.current?.type as string | undefined;
 
-    if (activeType === "book" && (overType === "folder" || overId === GO_UP_ID)) {
+    if (
+      activeType === "book" &&
+      (overType === "folder" || overId === GO_UP_ID)
+    ) {
       // Book over folder: highlight only, never shift (groups never interleave).
       setOverFolderId(overId);
       return;
@@ -394,11 +410,7 @@ export default function BookList({
         setMovedAwayIds((prev) =>
           prev.includes(activeId) ? prev : [...prev, activeId],
         );
-        await addFolderToFolder(
-          activeId,
-          parentFolderId ?? null,
-          uid,
-        );
+        await addFolderToFolder(activeId, parentFolderId ?? null, uid);
         movedRef.current = `${activeId}->${overId}`;
         onRefresh(activeId);
         return;
@@ -479,6 +491,16 @@ export default function BookList({
       }}
     >
       <div onClickCapture={handleClickCapture}>
+        {(booksDragDisabled || foldersDragDisabled) && dragDisabledNotice && (
+          <div
+            role="note"
+            title={dragDisabledNotice}
+            className="mb-4 flex items-start gap-2 rounded-md border border-grey4 bg-background px-3 py-2 text-xs text-grey2"
+          >
+            <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>{dragDisabledNotice}</span>
+          </div>
+        )}
         {error && (
           <div
             role="alert"
@@ -489,10 +511,7 @@ export default function BookList({
         )}
 
         {showFolderGrid && (
-          <SortableContext
-            items={folderIds}
-            strategy={rectSortingStrategy}
-          >
+          <SortableContext items={folderIds} strategy={rectSortingStrategy}>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5">
               {!isRoot && (
                 <FolderCard
@@ -517,6 +536,7 @@ export default function BookList({
                   key={folder.id}
                   folder={folder}
                   highlighted={overFolderId === folder.id}
+                  dragDisabled={foldersDragDisabled}
                   placeholder={
                     movedAwayIds.includes(folder.id) ||
                     folder.id === hiddenDragFolderId
@@ -546,6 +566,7 @@ export default function BookList({
                 <BookCard
                   key={book.id}
                   book={book}
+                  sortable={!booksDragDisabled}
                   placeholder={
                     movedAwayIds.includes(book.id) ||
                     book.id === hiddenDragBookId
