@@ -24,7 +24,7 @@ import supabase, {
 } from "@/lib/supabase";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
-import { Loader2, Lock, Search, Trash2 } from "lucide-react";
+import { Loader2, Search, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FolderNameModal } from "@/components/Modals/FolderNameModal";
 import {
@@ -526,10 +526,6 @@ export default function Books() {
   const booksDragDisabled = isSearching;
   const foldersDragDisabled = isSearching;
 
-  const dragDisabledNotice: string | null = isSearching
-    ? "Drag-and-drop is paused while searching. Clear the search to reorder."
-    : null;
-
   const resetGlobalSearchState = useCallback(() => {
     searchSeqRef.current++;
     setDebouncedQuery("");
@@ -862,19 +858,6 @@ export default function Books() {
               </div>
             ) : (
               <div className="space-y-6" aria-label="Library search results">
-                {dragDisabledNotice && (
-                  <div
-                    role="note"
-                    title={dragDisabledNotice}
-                    className="mb-4 flex items-start gap-2 rounded-md border border-grey4 bg-background px-3 py-2 text-xs text-grey2"
-                  >
-                    <Lock
-                      className="mt-0.5 h-3.5 w-3.5 shrink-0"
-                      aria-hidden="true"
-                    />
-                    <span>{dragDisabledNotice}</span>
-                  </div>
-                )}
                 {isGlobalPending && (
                   <div
                     className="flex items-center gap-2 text-sm text-grey2"
@@ -959,7 +942,6 @@ export default function Books() {
                 refreshKey={folderPreviewVersion}
                 booksDragDisabled={booksDragDisabled}
                 foldersDragDisabled={foldersDragDisabled}
-                dragDisabledNotice={dragDisabledNotice}
               />
             </div>
           )
@@ -997,7 +979,6 @@ export default function Books() {
                 refreshKey={folderPreviewVersion}
                 booksDragDisabled={booksDragDisabled}
                 foldersDragDisabled={foldersDragDisabled}
-                dragDisabledNotice={dragDisabledNotice}
               />
               {/* BookList renders nothing at root when empty, but in a
                * subfolder it still shows the "go up" button — so an empty
